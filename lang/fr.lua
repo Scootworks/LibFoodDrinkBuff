@@ -1,0 +1,5 @@
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXCEL, "[<<1>>] = true, -- <<2>>")
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_RELOAD, "L'interface utilisateur sera rechargée dans |cFF00005 secondes|r!")
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START, "La recherche de nourriture / boisson a commencée. Cela peut prendre quelques secondes...")
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, "Le recherche est terminée. <<C:1[Aucune nourriture ou boisson/$d nourriture ou boisson/$d nourritures ou boissons]>> ont <<1[été/été/étés]>> <<1[exporté/exporté/exportés]>>.")
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, "<<1>>!\nParamètre manquant pour for |cFFFFFF/dumpfdb|r!\nUtilisez |cFFFFFFall|r - exporte la liste complète ou\n|cFFFFFFnew|r - exporte seulement la nourriture / boisson")
