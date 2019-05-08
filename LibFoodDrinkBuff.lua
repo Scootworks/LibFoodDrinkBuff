@@ -171,13 +171,14 @@ end
 
 -- Calculate time left of a food/drink buff
 function LibFoodDrinkBuff:GetTimeLeftInSeconds(timeInMilliseconds)
+-- Returns 1: number seconds
 	return math.max(zo_roundToNearest(timeInMilliseconds-(GetGameTimeMilliseconds()/1000), 1), 0)
 end
 
 function LibFoodDrinkBuff:GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
 	local isDrinkBuff = IS_DRINK_BUFF[abilityId]
-	return isDrinkBuff or IS_FOOD_BUFF[abilityId] or FOOD_BUFF_NONE, isDrinkBuff > FOOD_BUFF_NONE
+	return isDrinkBuff or IS_FOOD_BUFF[abilityId] or FOOD_BUFF_NONE, isDrinkBuff ~= nil and true or false
 end
 
 function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
@@ -186,7 +187,6 @@ function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 	if numBuffs > 0 then
 		local buffName, timeStarted, timeEnding, iconTexture, abilityId, buffTypeDrink, buffTypeFood, buffTypeFoodDrink, isDrink
 		for i = 1, numBuffs do
-			-- get buff infos
 			-- Returns 13: string buffName, number timeStarted, number timeEnding, number buffSlot, number stackCount, string iconFilename, string buffType, number effectType, number abilityType, number statusEffectType, number abilityId, bool canClickOff, bool castByPlayer
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
 			buffTypeFoodDrink, isDrink = self:GetBuffTypeInfos(abilityId)
@@ -235,12 +235,7 @@ end
 function LibFoodDrinkBuff:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
 	if abilityId ~= nil then
-		if IS_DRINK_BUFF[abilityId] then
-			return true
-		end
-		if IS_FOOD_BUFF[abilityId] then
-			return false
-		end
+		return select(2, self:GetBuffTypeInfos(abilityId))
 	end
 	return nil
 end
@@ -309,11 +304,21 @@ end
 function LibFoodDrinkBuffManager:Initialize()
 	self.async = LibAsync
 	if self.async then
-		self.export = LibFoodDrinkBuff_Save or {}
-		self.TaskScan = self.async:Create("FoodDrinkBuffCheck")
-		self.TaskMessage = self.async:Create("FoodDrinkBuffMessage")
+		local function OnAddOnLoaded(_, addOnName)
+			if addOnName == LIB_IDENTIFIER then
+				EVENT_MANAGER:UnregisterForEvent(LIB_IDENTIFIER.."LibFoodDrinkBuffManager", EVENT_ADD_ON_LOADED)
+				
+				self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save")
+				self.sv.list = {}
+				
+				self.TaskScan = self.async:Create("FoodDrinkBuffCheck")
+				self.TaskMessage = self.async:Create("FoodDrinkBuffMessage")
 
-		self:InitializeSlashCommands()
+				self:InitializeSlashCommands()
+			end
+		end
+
+		EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER.."LibFoodDrinkBuffManager", EVENT_ADD_ON_LOADED, OnAddOnLoaded)
 	end
 end
 
@@ -326,11 +331,11 @@ function LibFoodDrinkBuffManager:Message(message, prefix)
 end
 
 function LibFoodDrinkBuffManager:NotificationAfterCreatingFoodDrinkTable()
-	local countEntries = #self.export
+	local countEntries = #self.sv.list
 	self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries), USE_PREFIX)
 	if countEntries > 0 then
-		self:Message(GetString(SI_LIB_FOOD_DRINK_BUFF_RELOAD, USE_PREFIX))
-		self.TaskMessage(5000, ReloadUI)
+		self:Message(GetString(SI_LIB_FOOD_DRINK_BUFF_RELOAD), USE_PREFIX)
+		self.TaskMessage:Delay(5000, function() ReloadUI("ingame") end)
 	end
 end
 
@@ -363,16 +368,18 @@ do
 				local channeled, castTime = GetAbilityCastInfo(abilityId)
 				local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
 				if cost == 0 and mechanic == 0 and GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) and GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" and not channeled and castTime == 0 and minRangeCM == 0 and maxRangeCM == 0 and GetAbilityRadius(abilityId) == 0 and GetAbilityAngleDistance(abilityId) == 0 and GetAbilityDuration(abilityId) > 2000000 then
+
 					local ability = {}
 					ability.id = abilityId
 					ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
 					ability.excel = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
+
 					if saveType == ARGUMENT_ALL then
-						self.export[#self.export+1] = ability
+						self.sv.list[#self.sv.list+1] = ability
 					else
-						local buffTypeFoodDrink = LIB_FOOD_DRINK_BUFF:GetBuffTypeInfos(abilityId)
-						if buffTypeFoodDrink ~= FOOD_BUFF_NONE then
-							self.export[#self.export+1] = ability
+						local buffTypeFoodDrink = LibFoodDrinkBuff:GetBuffTypeInfos(abilityId)
+						if buffTypeFoodDrink == FOOD_BUFF_NONE then
+							self.sv.list[#self.sv.list+1] = ability
 						end
 					end
 				end
@@ -383,7 +390,7 @@ do
 	function LibFoodDrinkBuffManager:InitializeSlashCommands()
 		SLASH_COMMANDS["/dumpfdb"] = function(saveType)
 			if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
-				ZO_ClearNumericallyIndexedTable(self.export)
+				ZO_ClearNumericallyIndexedTable(self.sv.list)
 				self:Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
 
 				self.TaskScan:For(0, LATEST_DISPLAY_ID):Do(function(abilityId)
@@ -408,17 +415,17 @@ do
 	function DEBUG_ACTIVE_BUFFS(unitTag)
 		unitTag = unitTag or "player"
 
-		self:Message(DIVIDER)
-		self:Message(zo_strformat("Debug <<1>> Buffs:", unitTag), USE_PREFIX)
+		LibFoodDrinkBuffManager:Message(DIVIDER)
+		LibFoodDrinkBuffManager:Message(zo_strformat("Debug \"<<1>>\" Buffs:", unitTag), USE_PREFIX)
 
 		local abilityId, buffName
 		local numBuffs = GetNumBuffs(unitTag)
 		for i = 1, numBuffs do
 			buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			self:Message(zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
+			LibFoodDrinkBuffManager:Message(zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
 		end
 
-		self:Message(DIVIDER)
+		LibFoodDrinkBuffManager:Message(DIVIDER)
 	end
 end
 
