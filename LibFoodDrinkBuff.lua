@@ -2,7 +2,7 @@ LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
 -- Author: Scootworks & Baertram
 --- Latest food & drink export: 100027 pts
-local LATEST_DISPLAY_ID = 125308 -- abilityId from UespLog AddOn "/uespdump skills abilities" or the latest displayId from esolog.uesp.net - Mined Skills
+local LATEST_DISPLAY_ID = 126112 -- abilityId from UespLog AddOn "/uespdump skills abilities" or the latest displayId from esolog.uesp.net - Mined Skills
 
 ----------------
 -- BUFF TYPES --
@@ -203,11 +203,9 @@ function LibFoodDrinkBuff:IsFoodBuffActive(unitTag)
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
 		local abilityId
-		local buffTypeFoodDrink = FOOD_BUFF_NONE
 		for i = 1, numBuffs do
 			abilityId = select(11, GetUnitBuffInfo(unitTag, i))
-			buffTypeFoodDrink = self:GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= FOOD_BUFF_NONE then
+			if self:GetBuffTypeInfos(abilityId) ~= FOOD_BUFF_NONE then
 				return true
 			end
 		end
@@ -220,11 +218,9 @@ function LibFoodDrinkBuff:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
 		local timeEnding, abilityId
-		local buffTypeFoodDrink = FOOD_BUFF_NONE
 		for i = 1, numBuffs do
 			_, _, timeEnding, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			buffTypeFoodDrink = self:GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= FOOD_BUFF_NONE then
+			if self:GetBuffTypeInfos(abilityId) ~= FOOD_BUFF_NONE then
 				return true, self:GetTimeLeftInSeconds(timeEnding), abilityId
 			end
 		end
@@ -377,8 +373,7 @@ do
 					if saveType == ARGUMENT_ALL then
 						self.sv.list[#self.sv.list+1] = ability
 					else
-						local buffTypeFoodDrink = LibFoodDrinkBuff:GetBuffTypeInfos(abilityId)
-						if buffTypeFoodDrink == FOOD_BUFF_NONE then
+						if LibFoodDrinkBuff:GetBuffTypeInfos(abilityId) == FOOD_BUFF_NONE then
 							self.sv.list[#self.sv.list+1] = ability
 						end
 					end
