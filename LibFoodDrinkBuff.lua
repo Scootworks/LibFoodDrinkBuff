@@ -46,7 +46,7 @@ local REGEN_MAGICKA_STAMINA_FISH = REGEN_MAGICKA + REGEN_STAMINA + FIND_FISHES
 --------------------
 -- DRINKS'n'FOODS --
 --------------------
-local IS_DRINK_BUFF = {
+local DRINK_BUFF_ABILITIES = {
 	[61322] = REGEN_HEALTH, -- Health Recovery
 	[61325] = REGEN_MAGICKA, -- Magicka Recovery
 	[61328] = REGEN_STAMINA, -- Health & Magicka Recovery
@@ -89,7 +89,7 @@ local IS_DRINK_BUFF = {
 	[100502] = REGEN_HEALTH_MAGICKA, -- Deregulated Mushroom Stew (Health + magicka reg)
 }
 
-local IS_FOOD_BUFF = {
+local FOOD_BUFF_ABILITIES = {
 	[17407] = MAX_HEALTH, -- Increase Max Health
 	[17577] = MAX_MAGICKA_STAMINA, -- Increase Max Magicka & Stamina
 	[17581] = MAX_ALL, -- Increase All Primary Stats
@@ -177,8 +177,8 @@ end
 
 function LibFoodDrinkBuff:GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
-	local isDrinkBuff = IS_DRINK_BUFF[abilityId]
-	return isDrinkBuff or IS_FOOD_BUFF[abilityId] or nil, isDrinkBuff ~= nil and true or false
+	local isDrinkBuff = DRINK_BUFF_ABILITIES[abilityId]
+	return isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or nil, isDrinkBuff ~= nil and true or false
 end
 
 function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
@@ -244,13 +244,13 @@ function LibFoodDrinkBuff:RegisterAbilityIdsFilterOnEventEffectChanged(addonEven
 	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" and type(callbackFunc) == "function" then
 		local eventCounter = 0
 		local eventName
-		for abilityId, _ in pairs(IS_FOOD_BUFF) do
+		for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
 			eventCounter = eventCounter + 1
 			eventName = addonEventNameSpace..eventCounter
 			EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
 			EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
 		end
-		for abilityId, _ in pairs(IS_DRINK_BUFF) do
+		for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
 			eventCounter = eventCounter + 1
 			eventName = addonEventNameSpace..eventCounter
 			EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
@@ -267,12 +267,12 @@ function LibFoodDrinkBuff:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEv
 		local eventCounter = 0
 		local eventName
 		if addonEventNameSpace == nil or addonEventNameSpace == "" then return nil end
-		for abilityId, _ in pairs(IS_FOOD_BUFF) do
+		for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
 			eventCounter = eventCounter + 1
 			eventName = addonEventNameSpace..eventCounter
 			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
 		end
-		for abilityId, _ in pairs(IS_DRINK_BUFF) do
+		for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
 			eventCounter = eventCounter + 1
 			eventName = addonEventNameSpace..eventCounter
 			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
