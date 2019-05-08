@@ -178,7 +178,7 @@ end
 function LibFoodDrinkBuff:GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
 	local isDrinkBuff = IS_DRINK_BUFF[abilityId]
-	return isDrinkBuff or IS_FOOD_BUFF[abilityId] or NONE, isDrinkBuff ~= nil and true or false
+	return isDrinkBuff or IS_FOOD_BUFF[abilityId] or nil, isDrinkBuff ~= nil and true or false
 end
 
 function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
@@ -190,7 +190,7 @@ function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 			-- Returns 13: string buffName, number timeStarted, number timeEnding, number buffSlot, number stackCount, string iconFilename, string buffType, number effectType, number abilityType, number statusEffectType, number abilityId, bool canClickOff, bool castByPlayer
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
 			buffTypeFoodDrink, isDrink = self:GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= NONE then
+			if buffTypeFoodDrink then
 				return buffTypeFoodDrink, isDrink, abilityId, zo_strformat("<<C:1>>", buffName), timeStarted, timeEnding, iconTexture
 			end
 		end
@@ -205,7 +205,7 @@ function LibFoodDrinkBuff:IsFoodBuffActive(unitTag)
 		local abilityId
 		for i = 1, numBuffs do
 			abilityId = select(11, GetUnitBuffInfo(unitTag, i))
-			if self:GetBuffTypeInfos(abilityId) ~= NONE then
+			if self:GetBuffTypeInfos(abilityId) then
 				return true
 			end
 		end
@@ -220,7 +220,7 @@ function LibFoodDrinkBuff:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 		local timeEnding, abilityId
 		for i = 1, numBuffs do
 			_, _, timeEnding, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			if self:GetBuffTypeInfos(abilityId) ~= NONE then
+			if self:GetBuffTypeInfos(abilityId) then
 				return true, self:GetTimeLeftInSeconds(timeEnding), abilityId
 			end
 		end
@@ -230,8 +230,9 @@ end
 
 function LibFoodDrinkBuff:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
-	if abilityId ~= nil then
-		return select(2, self:GetBuffTypeInfos(abilityId))
+	local buffTypeFoodDrink, isDrink = self:GetBuffTypeInfos(abilityId)
+	if buffTypeFoodDrink then
+		return isDrink
 	end
 	return nil
 end
