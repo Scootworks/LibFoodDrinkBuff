@@ -262,6 +262,8 @@ function LibFoodDrinkBuff:Initialize()
 			EVENT_MANAGER:UnregisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
 			self.version = self:GetAddonVersionFromManifest(LIB_IDENTIFIER)
 
+			self.eventList = {}
+
 			self.async = LibAsync
 			if self.async then
 				self.manager = LibFoodDrinkBuffManager:New()
@@ -271,7 +273,7 @@ function LibFoodDrinkBuff:Initialize()
 	EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
 end
 
--- Read the addon version from the addon's txt manifest file tag ##AddOnVersion
+-- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
 function LibFoodDrinkBuff:GetAddonVersionFromManifest(addOnNameString)
 -- Returns 1: number addOnVersion
 	if addOnNameString then
@@ -296,7 +298,7 @@ function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 -- Returns 7: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture, number timeLeftInSeconds
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
-		local buffName, timeStarted, timeEnding, iconTexture, abilityId, buffTypeDrink, buffTypeFood, buffTypeFoodDrink, isDrink
+		local buffName, timeStarted, timeEnding, iconTexture, abilityId, buffTypeFoodDrink, isDrink
 		for i = 1, numBuffs do
 			-- Returns 13: string buffName, number timeStarted, number timeEnding, number buffSlot, number stackCount, string iconFilename, string buffType, number effectType, number abilityType, number statusEffectType, number abilityId, bool canClickOff, bool castByPlayer
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
@@ -367,6 +369,7 @@ function LibFoodDrinkBuff:RegisterAbilityIdsFilterOnEventEffectChanged(addonEven
 			EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
 			EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
 		end
+		self.eventList[#self.eventList+1] = addonEventNameSpace
 		return true
 	end
 	return nil
@@ -374,10 +377,10 @@ end
 
 -- Unregister the register function above
 function LibFoodDrinkBuff:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
-	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" then
+	local index = ZO_IndexOfElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
+	if index then
 		local eventCounter = 0
 		local eventName
-		if addonEventNameSpace == nil or addonEventNameSpace == "" then return nil end
 		for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
 			eventCounter = eventCounter + 1
 			eventName = addonEventNameSpace..eventCounter
@@ -388,6 +391,7 @@ function LibFoodDrinkBuff:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEv
 			eventName = addonEventNameSpace..eventCounter
 			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
 		end
+		table.remove(self.eventList, index)
 		return true
 	end
 	return nil
