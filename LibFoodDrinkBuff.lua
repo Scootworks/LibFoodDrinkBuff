@@ -135,6 +135,12 @@ local FOOD_BUFF_ABILITIES = {
 	[107789] = MAX_HEALTH_STAMINA_REGEN_HEALTH_STAMINA, -- Artaeum Takeaway Broth (Increase Health & Stamina & Health Recovery & Stamina Recovery)
 }
 
+local function GetBuffTypeInfos(abilityId)
+-- Returns 2: number buffTypeFoodDrink, bool isDrink
+	local isDrinkBuff = DRINK_BUFF_ABILITIES[abilityId]
+	return isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or nil, isDrinkBuff ~= nil and true or false
+end
+
 local LibFoodDrinkBuff = ZO_Object:Subclass()
 
 function LibFoodDrinkBuff:New(...)
@@ -175,12 +181,6 @@ function LibFoodDrinkBuff:GetTimeLeftInSeconds(timeInMilliseconds)
 	return math.max(zo_roundToNearest(timeInMilliseconds-(GetGameTimeMilliseconds()/1000), 1), 0)
 end
 
-function LibFoodDrinkBuff:GetBuffTypeInfos(abilityId)
--- Returns 2: number buffTypeFoodDrink, bool isDrink
-	local isDrinkBuff = DRINK_BUFF_ABILITIES[abilityId]
-	return isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or nil, isDrinkBuff ~= nil and true or false
-end
-
 function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 -- Returns 7: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture
 	local numBuffs = GetNumBuffs(unitTag)
@@ -189,7 +189,7 @@ function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 		for i = 1, numBuffs do
 			-- Returns 13: string buffName, number timeStarted, number timeEnding, number buffSlot, number stackCount, string iconFilename, string buffType, number effectType, number abilityType, number statusEffectType, number abilityId, bool canClickOff, bool castByPlayer
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			buffTypeFoodDrink, isDrink = self:GetBuffTypeInfos(abilityId)
+			buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
 			if buffTypeFoodDrink then
 				return buffTypeFoodDrink, isDrink, abilityId, zo_strformat("<<C:1>>", buffName), timeStarted, timeEnding, iconTexture
 			end
@@ -205,7 +205,7 @@ function LibFoodDrinkBuff:IsFoodBuffActive(unitTag)
 		local abilityId
 		for i = 1, numBuffs do
 			abilityId = select(11, GetUnitBuffInfo(unitTag, i))
-			if self:GetBuffTypeInfos(abilityId) then
+			if GetBuffTypeInfos(abilityId) then
 				return true
 			end
 		end
@@ -220,7 +220,7 @@ function LibFoodDrinkBuff:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 		local timeEnding, abilityId
 		for i = 1, numBuffs do
 			_, _, timeEnding, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			if self:GetBuffTypeInfos(abilityId) then
+			if GetBuffTypeInfos(abilityId) then
 				return true, self:GetTimeLeftInSeconds(timeEnding), abilityId
 			end
 		end
@@ -230,7 +230,7 @@ end
 
 function LibFoodDrinkBuff:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
-	local buffTypeFoodDrink, isDrink = self:GetBuffTypeInfos(abilityId)
+	local buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
 	if buffTypeFoodDrink then
 		return isDrink
 	end
@@ -374,7 +374,7 @@ do
 					if saveType == ARGUMENT_ALL then
 						self.sv.list[#self.sv.list+1] = ability
 					else
-						if LibFoodDrinkBuff:GetBuffTypeInfos(abilityId) == NONE then
+						if GetBuffTypeInfos(abilityId) == NONE then
 							self.sv.list[#self.sv.list+1] = ability
 						end
 					end
