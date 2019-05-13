@@ -182,7 +182,7 @@ function LibFoodDrinkBuff:GetTimeLeftInSeconds(timeInMilliseconds)
 end
 
 function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
--- Returns 7: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture
+-- Returns 7: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture, number timeLeftInSeconds
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
 		local buffName, timeStarted, timeEnding, iconTexture, abilityId, buffTypeDrink, buffTypeFood, buffTypeFoodDrink, isDrink
@@ -191,11 +191,11 @@ function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
 			buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
 			if buffTypeFoodDrink then
-				return buffTypeFoodDrink, isDrink, abilityId, zo_strformat("<<C:1>>", buffName), timeStarted, timeEnding, iconTexture
+				return buffTypeFoodDrink, isDrink, abilityId, ZO_CachedStrFormat(SI_UNIT_NAME, buffName), timeStarted, timeEnding, iconTexture, self:GetTimeLeftInSeconds(timeEnding)
 			end
 		end
 	end
-	return NONE, nil, nil, nil, nil, nil, nil
+	return NONE, nil, nil, nil, nil, nil, nil, nil
 end
 
 function LibFoodDrinkBuff:IsFoodBuffActive(unitTag)
@@ -214,7 +214,7 @@ function LibFoodDrinkBuff:IsFoodBuffActive(unitTag)
 end
 
 function LibFoodDrinkBuff:IsFoodBuffActiveAndGetTimeLeft(unitTag)
--- Returns 3: bool isBuffActive, number timeLeftInSeconds , number abilityId
+-- Returns 3: bool isBuffActive, number timeLeftInSeconds, number abilityId
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
 		local timeEnding, abilityId
