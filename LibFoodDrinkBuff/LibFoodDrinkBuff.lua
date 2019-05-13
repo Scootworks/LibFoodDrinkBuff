@@ -167,15 +167,15 @@ local BLACKLIST_NO_FOOD_DRINK_BUFFS =
 	[116467] = true, -- MillionHealth
 }
 
-local LibFoodDrinkBuffManager = ZO_Object:Subclass()
+local LibFoodDrinkBuffDataCollector = ZO_Object:Subclass()
 
-function LibFoodDrinkBuffManager:New(...)
+function LibFoodDrinkBuffDataCollector:New(...)
 	local object = ZO_Object.New(self)
 	object:Initialize(...)
 	return object
 end
 
-function LibFoodDrinkBuffManager:Initialize(async)
+function LibFoodDrinkBuffDataCollector:Initialize(async)
 	self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save")
 	self.sv.list = {}
 	
@@ -186,7 +186,7 @@ function LibFoodDrinkBuffManager:Initialize(async)
 	self:InitializeSlashCommands()
 end
 
-function LibFoodDrinkBuffManager:Message(message, prefix)
+function LibFoodDrinkBuffDataCollector:Message(message, prefix)
 	if prefix then
 		df("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message)
 	else
@@ -194,7 +194,7 @@ function LibFoodDrinkBuffManager:Message(message, prefix)
 	end
 end
 
-function LibFoodDrinkBuffManager:NotificationAfterCreatingFoodDrinkTable()
+function LibFoodDrinkBuffDataCollector:NotificationAfterCreatingFoodDrinkTable()
 	local countEntries = #self.sv.list
 	self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries), USE_PREFIX)
 	if countEntries > 0 then
@@ -203,7 +203,7 @@ function LibFoodDrinkBuffManager:NotificationAfterCreatingFoodDrinkTable()
 	end
 end
 
-function LibFoodDrinkBuffManager:AddToFoodDrinkTable(abilityId, saveType)
+function LibFoodDrinkBuffDataCollector:AddToFoodDrinkTable(abilityId, saveType)
 	if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
 		if DoesAbilityExist(abilityId) then
 			local cost, mechanic = GetAbilityCost(abilityId)
@@ -228,7 +228,7 @@ function LibFoodDrinkBuffManager:AddToFoodDrinkTable(abilityId, saveType)
 	end
 end
 
-function LibFoodDrinkBuffManager:InitializeSlashCommands()
+function LibFoodDrinkBuffDataCollector:InitializeSlashCommands()
 	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
 		if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
 			ZO_ClearNumericallyIndexedTable(self.sv.list)
@@ -268,7 +268,7 @@ function LibFoodDrinkBuff:Initialize()
 			-- the manager is only active, if you have LibAsync
 			self.async = LibAsync
 			if self.async then
-				self.manager = LibFoodDrinkBuffManager:New(self.async)
+				self.manager = LibFoodDrinkBuffDataCollector:New(self.async)
 			end
 		end
 	end
@@ -412,17 +412,17 @@ do
 	function DEBUG_ACTIVE_BUFFS(unitTag)
 		unitTag = unitTag or "player"
 
-		LibFoodDrinkBuffManager:Message(DIVIDER)
-		LibFoodDrinkBuffManager:Message(zo_strformat("Debug \"<<1>>\" Buffs:", unitTag), USE_PREFIX)
+		LibFoodDrinkBuffDataCollector:Message(DIVIDER)
+		LibFoodDrinkBuffDataCollector:Message(zo_strformat("Debug \"<<1>>\" Buffs:", unitTag), USE_PREFIX)
 
 		local buffName, abilityId 
 		local numBuffs = GetNumBuffs(unitTag)
 		for i = 1, numBuffs do
 			buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			LibFoodDrinkBuffManager:Message(zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
+			LibFoodDrinkBuffDataCollector:Message(zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
 		end
 
-		LibFoodDrinkBuffManager:Message(DIVIDER)
+		LibFoodDrinkBuffDataCollector:Message(DIVIDER)
 	end
 end
 
