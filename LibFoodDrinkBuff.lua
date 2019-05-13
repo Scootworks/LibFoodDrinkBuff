@@ -175,12 +175,13 @@ function LibFoodDrinkBuffManager:New(...)
 	return object
 end
 
-function LibFoodDrinkBuffManager:Initialize()
+function LibFoodDrinkBuffManager:Initialize(async)
 	self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save")
 	self.sv.list = {}
 	
-	self.TaskScan = self.async:Create("FoodDrinkBuffCheck")
-	self.TaskMessage = self.async:Create("FoodDrinkBuffMessage")
+	local libAsync = async
+	self.TaskScan = libAsync:Create("FoodDrinkBuffCheck")
+	self.TaskMessage = libAsync:Create("FoodDrinkBuffMessage")
 
 	self:InitializeSlashCommands()
 end
@@ -195,9 +196,9 @@ end
 
 function LibFoodDrinkBuffManager:NotificationAfterCreatingFoodDrinkTable()
 	local countEntries = #self.sv.list
-	self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_EXPORT_FINISH, countEntries), USE_PREFIX)
+	self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries), USE_PREFIX)
 	if countEntries > 0 then
-		self:Message(GetString(SI_LIB_FOOD_DRINK_RELOAD), USE_PREFIX)
+		self:Message(GetString(SI_LIB_FOOD_DRINK_BUFF_RELOAD), USE_PREFIX)
 		self.TaskMessage:Delay(5000, function() ReloadUI("ingame") end)
 	end
 end
@@ -213,7 +214,7 @@ function LibFoodDrinkBuffManager:AddToFoodDrinkTable(abilityId, saveType)
 				local ability = {}
 				ability.id = abilityId
 				ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
-				ability.excel = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_EXCEL, abilityId, ability.name)
+				ability.excel = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
 
 				if saveType == ARGUMENT_ALL then
 					self.sv.list[#self.sv.list+1] = ability
@@ -231,7 +232,7 @@ function LibFoodDrinkBuffManager:InitializeSlashCommands()
 	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
 		if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
 			ZO_ClearNumericallyIndexedTable(self.sv.list)
-			self:Message(GetString(SI_LIB_FOOD_DRINK_EXPORT_START), USE_PREFIX)
+			self:Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
 
 			self.TaskScan:For(0, LATEST_DISPLAY_ID):Do(function(abilityId)
 				self:AddToFoodDrinkTable(abilityId, saveType)
@@ -239,7 +240,7 @@ function LibFoodDrinkBuffManager:InitializeSlashCommands()
 				self:NotificationAfterCreatingFoodDrinkTable()
 			end)
 		else
-			self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
+			self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
 		end
 	end
 end
@@ -267,7 +268,7 @@ function LibFoodDrinkBuff:Initialize()
 			-- the manager is only active, if you have LibAsync
 			self.async = LibAsync
 			if self.async then
-				self.manager = LibFoodDrinkBuffManager:New()
+				self.manager = LibFoodDrinkBuffManager:New(self.async)
 			end
 		end
 	end
