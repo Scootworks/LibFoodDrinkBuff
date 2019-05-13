@@ -264,6 +264,7 @@ function LibFoodDrinkBuff:Initialize()
 
 			self.eventList = {}
 
+			-- the manager is only active, if you have LibAsync
 			self.async = LibAsync
 			if self.async then
 				self.manager = LibFoodDrinkBuffManager:New()
@@ -304,7 +305,7 @@ function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
 			buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
 			if buffTypeFoodDrink then
-				return buffTypeFoodDrink, isDrink, abilityId, ZO_CachedStrFormat(SI_UNIT_NAME, buffName), timeStarted, timeEnding, iconTexture, self:GetTimeLeftInSeconds(timeEnding)
+				return buffTypeFoodDrink, isDrink, abilityId, ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ABILITY_NAME, buffName), timeStarted, timeEnding, iconTexture, self:GetTimeLeftInSeconds(timeEnding)
 			end
 		end
 	end
@@ -355,22 +356,25 @@ end
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
 function LibFoodDrinkBuff:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, callbackFunc, filterType, filterParameter)
 	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" and type(callbackFunc) == "function" then
-		local eventCounter = 0
-		local eventName
-		for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
-			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace..eventCounter
-			EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
-			EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
+		local isElement = ZO_IsElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
+		if not isElement then
+			local eventCounter = 0
+			local eventName
+			for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
+				eventCounter = eventCounter + 1
+				eventName = addonEventNameSpace..eventCounter
+				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
+				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
+			end
+			for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
+				eventCounter = eventCounter + 1
+				eventName = addonEventNameSpace..eventCounter
+				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
+				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
+			end
+			self.eventList[#self.eventList+1] = addonEventNameSpace
+			return true
 		end
-		for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
-			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace..eventCounter
-			EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
-			EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
-		end
-		self.eventList[#self.eventList+1] = addonEventNameSpace
-		return true
 	end
 	return nil
 end
