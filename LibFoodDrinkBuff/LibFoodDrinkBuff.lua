@@ -265,10 +265,10 @@ function LibFoodDrinkBuff:Initialize()
 
 			self.eventList = {}
 
-			-- the manager is only active, if you have LibAsync
+			-- the collector is only active, if you have LibAsync
 			self.async = LibAsync
 			if self.async then
-				self.manager = LibFoodDrinkBuffDataCollector:New(self.async)
+				self.collector = LibFoodDrinkBuffDataCollector:New(self.async)
 			end
 		end
 	end
