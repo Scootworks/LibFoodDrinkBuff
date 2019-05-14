@@ -141,8 +141,8 @@ local function GetBuffTypeInfos(abilityId)
 	return isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or nil, isDrinkBuff ~= nil and true or false
 end
 
-local function Message(message, prefix)
-	message = prefix and string.format("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message) or message
+local function Message(message, hasPrefix)
+	message = hasPrefix and string.format("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message) or message
 
 	if CHAT_SYSTEM.primaryContainer then
 		CHAT_SYSTEM.primaryContainer:OnChatEvent(nil, message, CHAT_CATEGORY_SYSTEM)
@@ -152,9 +152,9 @@ local function Message(message, prefix)
 end
 
 
--------------
--- MANAGER --
--------------
+---------------
+-- COLLECTOR --
+---------------
 local USE_PREFIX = true
 local FIRST_ABILITY = 1
 local ARGUMENT_ALL = "all"
