@@ -50,7 +50,7 @@ local DRINK_BUFF_ABILITIES = {
 	[61322] = REGEN_HEALTH, -- Health Recovery
 	[61325] = REGEN_MAGICKA, -- Magicka Recovery
 	[61328] = REGEN_STAMINA, -- Health & Magicka Recovery
-	[61335] = REGEN_HEALTH_MAGICKA, -- Health & Magicka Recovery (Liqueurs)
+	[61335] = REGEN_HEALTH_MAGICKA, -- Health & Magicka Recovery
 	[61340] = REGEN_HEALTH_STAMINA, -- Health & Stamina Recovery
 	[61345] = REGEN_MAGICKA_STAMINA, -- Magicka & Stamina Recovery
 	[61350] = REGEN_ALL, -- All Primary Stat Recovery
@@ -86,7 +86,7 @@ local DRINK_BUFF_ABILITIES = {
 	[89957] = MAX_STAMINA_HEALTH_REGEN_STAMINA, -- Dubious Camoran Throne
 	[92433] = REGEN_HEALTH_MAGICKA, -- Health & Magicka Recovery
 	[92476] = REGEN_HEALTH_STAMINA, -- Health & Stamina Recovery
-	[100502] = REGEN_HEALTH_MAGICKA, -- Deregulated Mushroom Stew (Health + magicka reg)
+	[100502] = REGEN_HEALTH_MAGICKA, -- Deregulated Mushroom Stew
 }
 
 local FOOD_BUFF_ABILITIES = {
@@ -102,8 +102,8 @@ local FOOD_BUFF_ABILITIES = {
 	[61260] = MAX_MAGICKA, -- Increase Max Magicka
 	[61261] = MAX_STAMINA, -- Increase Max Stamina
 	[61294] = MAX_MAGICKA_STAMINA, -- Increase Max Magicka & Stamina
-	[66128] = MAX_MAGICKA, -- Increase Max Magicka (Fruit Dishes)
-	[66130] = MAX_STAMINA, -- Increase Max Stamina (Vegetable Dishes)
+	[66128] = MAX_MAGICKA, -- Increase Max Magicka
+	[66130] = MAX_STAMINA, -- Increase Max Stamina
 	[66551] = MAX_HEALTH, -- Garlic and Pepper Venison Steak
 	[66568] = MAX_MAGICKA, -- Increase Max Magicka
 	[66576] = MAX_STAMINA, -- Increase Max Stamina
@@ -129,10 +129,10 @@ local FOOD_BUFF_ABILITIES = {
 	[92437] = MAX_HEALTH, -- Increase Health
 	[92474] = MAX_HEALTH_STAMINA, -- Increase Health & Stamina
 	[92477] = MAX_HEALTH, -- Increase Health
-	[100488] = MAX_ALL, -- Spring-Loaded Infusion (Increase all primary stats)
-	[100498] = MAX_HEALTH_MAGICKA_REGEN_HEALTH_MAGICKA, -- Clockwork Citrus Filet (Increase health + health Recovery, and magicka + magicka Recovery)
-	[107748] = MAX_HEALTH_MAGICKA_FISH, -- Lure Allure (Increase Health & Magicka)
-	[107789] = MAX_HEALTH_STAMINA_REGEN_HEALTH_STAMINA, -- Artaeum Takeaway Broth (Increase Health & Stamina & Health Recovery & Stamina Recovery)
+	[100488] = MAX_ALL, -- Spring-Loaded Infusion
+	[100498] = MAX_HEALTH_MAGICKA_REGEN_HEALTH_MAGICKA, -- Clockwork Citrus Filet
+	[107748] = MAX_HEALTH_MAGICKA_FISH, -- Lure Allure
+	[107789] = MAX_HEALTH_STAMINA_REGEN_HEALTH_STAMINA, -- Artaeum Takeaway Broth
 }
 
 local function GetBuffTypeInfos(abilityId)
@@ -143,7 +143,11 @@ end
 
 local function Message(message, prefix)
 	if prefix then
-		df("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message)
+		message = zo_strformat("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message)
+	end
+
+	if CHAT_SYSTEM.primaryContainer then
+		CHAT_SYSTEM.primaryContainer:OnChatEvent(nil, message, CHAT_CATEGORY_SYSTEM)
 	else
 		d(message)
 	end
@@ -245,25 +249,22 @@ end
 ---------------------
 local lib = { }
 
-function lib:OnAddOnLoaded(_, addOnName)
-	if addOnName == LIB_IDENTIFIER then
-		EVENT_MANAGER:UnregisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
-		self.version = self:GetAddonVersionFromManifest(LIB_IDENTIFIER)
+function lib:Initialize()
+	self.version = self:GetAddonVersionFromManifest()
 
-		self.eventList = {}
+	self.eventList = {}
 
-		-- the collector is only active, if you have LibAsync
-		self.async = LibAsync
-		if self.async then
-			collector:Initialize(self.async)
-		end
+	-- the collector is only active, if you have LibAsync
+	self.async = LibAsync
+	if self.async then
+		collector:Initialize(self.async)
 	end
 end
-EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, function(...) lib:OnAddOnLoaded(...) end)
 
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
 function lib:GetAddonVersionFromManifest(addOnNameString)
 -- Returns 1: number addOnVersion
+	addOnNameString = addOnNameString or LIB_IDENTIFIER
 	if addOnNameString then
 		local ADDON_MANAGER = GetAddOnManager()
 		for i = 1, ADDON_MANAGER:GetNumAddOns() do
@@ -387,6 +388,14 @@ function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
 	end
 	return nil
 end
+
+local function OnAddOnLoaded(_, addOnName)
+	if addOnName == LIB_IDENTIFIER then
+		EVENT_MANAGER:UnregisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
+		lib:Initialize()
+	end
+end
+EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
 
 
 -------------
