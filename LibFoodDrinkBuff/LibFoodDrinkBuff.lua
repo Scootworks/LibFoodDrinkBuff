@@ -1,8 +1,10 @@
-LIB_IDENTIFIER = "LibFoodDrinkBuff"
+local LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
 -- Author: Scootworks & Baertram
 --- Latest food & drink export: 100027 pts
 local LATEST_DISPLAY_ID = 126112 -- abilityId from UespLog AddOn "/uespdump skills abilities" or the latest displayId from esolog.uesp.net - Mined Skills
+
+local USE_PREFIX = true
 
 ----------------
 -- BUFF TYPES --
@@ -155,8 +157,6 @@ end
 ---------------
 -- COLLECTOR --
 ---------------
-local USE_PREFIX = true
-local FIRST_ABILITY = 1
 local ARGUMENT_ALL = "all"
 local ARGUMENT_NEW = "new"
 
@@ -225,6 +225,8 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 end
 
 function collector:InitializeSlashCommands()
+	local FIRST_ABILITY = 1
+	
 	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
 		if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
 			ZO_ClearNumericallyIndexedTable(self.sv.list)
