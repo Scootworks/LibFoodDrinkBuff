@@ -141,11 +141,20 @@ local function GetBuffTypeInfos(abilityId)
 	return isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or nil, isDrinkBuff ~= nil and true or false
 end
 
+local function Message(message, prefix)
+	if prefix then
+		df("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message)
+	else
+		d(message)
+	end
+end
+
 
 -------------
 -- MANAGER --
 -------------
 local USE_PREFIX = true
+local FIRST_ABILITY = 1
 local ARGUMENT_ALL = "all"
 local ARGUMENT_NEW = "new"
 
@@ -167,43 +176,28 @@ local BLACKLIST_NO_FOOD_DRINK_BUFFS =
 	[116467] = true, -- MillionHealth
 }
 
-local LibFoodDrinkBuffDataCollector = ZO_Object:Subclass()
+local collector = { }
 
-function LibFoodDrinkBuffDataCollector:New(...)
-	local object = ZO_Object.New(self)
-	object:Initialize(...)
-	return object
-end
-
-function LibFoodDrinkBuffDataCollector:Initialize(async)
+function collector:Initialize(async)
 	self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save")
 	self.sv.list = {}
-	
-	local libAsync = async
-	self.TaskScan = libAsync:Create("FoodDrinkBuffCheck")
-	self.TaskMessage = libAsync:Create("FoodDrinkBuffMessage")
+
+	self.TaskScan = async:Create("FoodDrinkBuffCheck")
+	self.TaskMessage = async:Create("FoodDrinkBuffMessage")
 
 	self:InitializeSlashCommands()
 end
 
-function LibFoodDrinkBuffDataCollector:Message(message, prefix)
-	if prefix then
-		df("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message)
-	else
-		d(message)
-	end
-end
-
-function LibFoodDrinkBuffDataCollector:NotificationAfterCreatingFoodDrinkTable()
+function collector:NotificationAfterCreatingFoodDrinkTable()
 	local countEntries = #self.sv.list
-	self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries), USE_PREFIX)
+	Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries), USE_PREFIX)
 	if countEntries > 0 then
-		self:Message(GetString(SI_LIB_FOOD_DRINK_BUFF_RELOAD), USE_PREFIX)
+		Message(GetString(SI_LIB_FOOD_DRINK_BUFF_RELOAD), USE_PREFIX)
 		self.TaskMessage:Delay(5000, function() ReloadUI("ingame") end)
 	end
 end
 
-function LibFoodDrinkBuffDataCollector:AddToFoodDrinkTable(abilityId, saveType)
+function collector:AddToFoodDrinkTable(abilityId, saveType)
 	if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
 		if DoesAbilityExist(abilityId) then
 			local cost, mechanic = GetAbilityCost(abilityId)
@@ -228,19 +222,19 @@ function LibFoodDrinkBuffDataCollector:AddToFoodDrinkTable(abilityId, saveType)
 	end
 end
 
-function LibFoodDrinkBuffDataCollector:InitializeSlashCommands()
+function collector:InitializeSlashCommands()
 	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
 		if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
 			ZO_ClearNumericallyIndexedTable(self.sv.list)
-			self:Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
+			Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
 
-			self.TaskScan:For(0, LATEST_DISPLAY_ID):Do(function(abilityId)
+			self.TaskScan:For(FIRST_ABILITY, LATEST_DISPLAY_ID):Do(function(abilityId)
 				self:AddToFoodDrinkTable(abilityId, saveType)
 			end):Then(function()
 				self:NotificationAfterCreatingFoodDrinkTable()
 			end)
 		else
-			self:Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
+			Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
 		end
 	end
 end
@@ -249,34 +243,26 @@ end
 ---------------------
 -- FOOD AND DRINKS --
 ---------------------
-local LibFoodDrinkBuff = ZO_Object:Subclass()
+local lib = { }
 
-function LibFoodDrinkBuff:New(...)
-	local object = ZO_Object.New(self)
-	object:Initialize(...)
-	return object
-end
+function lib:OnAddOnLoaded(_, addOnName)
+	if addOnName == LIB_IDENTIFIER then
+		EVENT_MANAGER:UnregisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
+		self.version = self:GetAddonVersionFromManifest(LIB_IDENTIFIER)
 
-function LibFoodDrinkBuff:Initialize()
-	local function OnAddOnLoaded(_, addOnName)
-		if addOnName == LIB_IDENTIFIER then
-			EVENT_MANAGER:UnregisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
-			self.version = self:GetAddonVersionFromManifest(LIB_IDENTIFIER)
+		self.eventList = {}
 
-			self.eventList = {}
-
-			-- the collector is only active, if you have LibAsync
-			self.async = LibAsync
-			if self.async then
-				self.collector = LibFoodDrinkBuffDataCollector:New(self.async)
-			end
+		-- the collector is only active, if you have LibAsync
+		self.async = LibAsync
+		if self.async then
+			collector:Initialize(self.async)
 		end
 	end
-	EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
 end
+EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, function(...) lib:OnAddOnLoaded(...) end)
 
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
-function LibFoodDrinkBuff:GetAddonVersionFromManifest(addOnNameString)
+function lib:GetAddonVersionFromManifest(addOnNameString)
 -- Returns 1: number addOnVersion
 	if addOnNameString then
 		local ADDON_MANAGER = GetAddOnManager()
@@ -291,12 +277,12 @@ function LibFoodDrinkBuff:GetAddonVersionFromManifest(addOnNameString)
 end
 
 -- Calculate time left of a food/drink buff
-function LibFoodDrinkBuff:GetTimeLeftInSeconds(timeInMilliseconds)
+function lib:GetTimeLeftInSeconds(timeInMilliseconds)
 -- Returns 1: number seconds
 	return math.max(zo_roundToNearest(timeInMilliseconds-(GetGameTimeMilliseconds()/1000), 1), 0)
 end
 
-function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
+function lib:GetFoodBuffInfos(unitTag)
 -- Returns 7: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture, number timeLeftInSeconds
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
@@ -313,7 +299,7 @@ function LibFoodDrinkBuff:GetFoodBuffInfos(unitTag)
 	return NONE, nil, nil, nil, nil, nil, nil, nil
 end
 
-function LibFoodDrinkBuff:IsFoodBuffActive(unitTag)
+function lib:IsFoodBuffActive(unitTag)
 -- Returns 1: bool isBuffActive
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
@@ -328,7 +314,7 @@ function LibFoodDrinkBuff:IsFoodBuffActive(unitTag)
 	return false
 end
 
-function LibFoodDrinkBuff:IsFoodBuffActiveAndGetTimeLeft(unitTag)
+function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 -- Returns 3: bool isBuffActive, number timeLeftInSeconds, number abilityId
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
@@ -343,7 +329,7 @@ function LibFoodDrinkBuff:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 	return false, 0, nil
 end
 
-function LibFoodDrinkBuff:IsAbilityADrinkBuff(abilityId)
+function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
 	local buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
 	if buffTypeFoodDrink then
@@ -355,7 +341,7 @@ end
 -- Filter the event EVENT_EFFECT_CHANGED to the local player and only the abilityIds of the food/drink buffs
 -- Possible additional filterTypes are: REGISTER_FILTER_UNIT_TAG, REGISTER_FILTER_UNIT_TAG_PREFIX
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
-function LibFoodDrinkBuff:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, callbackFunc, filterType, filterParameter)
+function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, callbackFunc, filterType, filterParameter)
 	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" and type(callbackFunc) == "function" then
 		local isElement = ZO_IsElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
 		if not isElement then
@@ -363,17 +349,17 @@ function LibFoodDrinkBuff:RegisterAbilityIdsFilterOnEventEffectChanged(addonEven
 			local eventName
 			for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
 				eventCounter = eventCounter + 1
-				eventName = addonEventNameSpace..eventCounter
+				eventName = addonEventNameSpace .. eventCounter
 				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
 				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
 			end
 			for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
 				eventCounter = eventCounter + 1
-				eventName = addonEventNameSpace..eventCounter
+				eventName = addonEventNameSpace .. eventCounter
 				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
 				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
 			end
-			self.eventList[#self.eventList+1] = addonEventNameSpace
+			self.eventList[#self.eventList + 1] = addonEventNameSpace
 			return true
 		end
 	end
@@ -381,19 +367,19 @@ function LibFoodDrinkBuff:RegisterAbilityIdsFilterOnEventEffectChanged(addonEven
 end
 
 -- Unregister the register function above
-function LibFoodDrinkBuff:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
+function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
 	local index = ZO_IndexOfElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
 	if index then
 		local eventCounter = 0
 		local eventName
 		for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
 			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace..eventCounter
+			eventName = addonEventNameSpace .. eventCounter
 			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
 		end
 		for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
 			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace..eventCounter
+			eventName = addonEventNameSpace .. eventCounter
 			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
 		end
 		table.remove(self.eventList, index)
@@ -412,18 +398,18 @@ do
 	function DEBUG_ACTIVE_BUFFS(unitTag)
 		unitTag = unitTag or "player"
 
-		LibFoodDrinkBuffDataCollector:Message(DIVIDER)
-		LibFoodDrinkBuffDataCollector:Message(zo_strformat("Debug \"<<1>>\" Buffs:", unitTag), USE_PREFIX)
+		Message(DIVIDER)
+		Message(zo_strformat("Debug \"<<1>>\" Buffs:", unitTag), USE_PREFIX)
 
 		local buffName, abilityId 
 		local numBuffs = GetNumBuffs(unitTag)
 		for i = 1, numBuffs do
 			buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			LibFoodDrinkBuffDataCollector:Message(zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
+			Message(zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
 		end
 
-		LibFoodDrinkBuffDataCollector:Message(DIVIDER)
+		Message(DIVIDER)
 	end
 end
 
-LIB_FOOD_DRINK_BUFF = LibFoodDrinkBuff:New()
+LIB_FOOD_DRINK_BUFF = lib
