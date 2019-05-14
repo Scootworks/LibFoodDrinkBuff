@@ -142,9 +142,7 @@ local function GetBuffTypeInfos(abilityId)
 end
 
 local function Message(message, prefix)
-	if prefix then
-		message = zo_strformat("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message)
-	end
+	message = prefix and string.format("|cFF0000[%s]|r %s", LIB_IDENTIFIER, message) or message
 
 	if CHAT_SYSTEM.primaryContainer then
 		CHAT_SYSTEM.primaryContainer:OnChatEvent(nil, message, CHAT_CATEGORY_SYSTEM)
