@@ -267,9 +267,9 @@ function lib:GetAddonVersionFromManifest(addOnNameString)
 	addOnNameString = addOnNameString or LIB_IDENTIFIER
 	if addOnNameString then
 		local ADDON_MANAGER = GetAddOnManager()
-		for i = 1, ADDON_MANAGER:GetNumAddOns() do
-			addOnName = ADDON_MANAGER:GetAddOnInfo(i)
-			if addOnName == addOnNameString then
+		local numAddOns = ADDON_MANAGER:GetNumAddOns()
+		for i = 1, numAddOns do
+			if ADDON_MANAGER:GetAddOnInfo(i) == addOnNameString then
 				return ADDON_MANAGER:GetAddOnVersion(i)
 			end
 		end
