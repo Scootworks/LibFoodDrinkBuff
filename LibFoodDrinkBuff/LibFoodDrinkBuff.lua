@@ -255,7 +255,7 @@ function lib:Initialize()
 	self.eventList = {}
 
 	-- the collector is only active, if you have LibAsync
-	self.async = LibAsync
+	self.async = LibAsync or (LibStub and LibStub("LibAsync", false))
 	if self.async then
 		collector:Initialize(self.async)
 	end
