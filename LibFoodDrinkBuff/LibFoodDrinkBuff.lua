@@ -2,7 +2,7 @@ local LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
 -- Author: Scootworks & Baertram
 --- Latest food & drink export: 100027 pts
-local LATEST_DISPLAY_ID = 126473 -- abilityId from UespLog AddOn "/uespdump skills abilities" or the latest displayId from esolog.uesp.net - Mined Skills
+local LATEST_DISPLAY_ID = 126679 -- abilityId from UespLog AddOn "/uespdump skills abilities" or the latest displayId from esolog.uesp.net - Mined Skills
 
 local USE_PREFIX = true
 
