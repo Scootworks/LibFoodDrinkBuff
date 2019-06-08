@@ -178,7 +178,7 @@ local BLACKLIST_NO_FOOD_DRINK_BUFFS =
 	[116467] = true, -- MillionHealth
 }
 
-local collector = { }
+local collector = ZO_Object:Subclass()
 
 function collector:Initialize(async)
 	self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save")
@@ -247,7 +247,7 @@ end
 ---------------------
 -- FOOD AND DRINKS --
 ---------------------
-local lib = { }
+local lib = ZO_Object:Subclass()
 
 function lib:Initialize()
 	self.version = self:GetAddonVersionFromManifest()
