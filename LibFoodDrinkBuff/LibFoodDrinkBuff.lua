@@ -343,23 +343,18 @@ end
 -- Possible additional filterTypes are: REGISTER_FILTER_UNIT_TAG, REGISTER_FILTER_UNIT_TAG_PREFIX
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
 function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, callbackFunc, filterType, filterParameter)
+-- Returns 16: changeType, effectSlot, effectName, unitTag, beginTime, endTime, stackCount, iconName, buffType, effectType, abilityType, statusEffectType, unitName, unitId, abilityId, sourceType
 	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" and type(callbackFunc) == "function" then
 		local isElement = ZO_IsElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
 		if not isElement then
-			local eventCounter = 0
-			local eventName
-			for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
-				eventCounter = eventCounter + 1
-				eventName = addonEventNameSpace .. eventCounter
-				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
-				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
-			end
-			for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
-				eventCounter = eventCounter + 1
-				eventName = addonEventNameSpace .. eventCounter
-				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
-				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
-			end
+			EVENT_MANAGER:RegisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, function(_, ...)
+				local abilityId = select(15, ...)
+				if FOOD_BUFF_ABILITIES[abilityId] or DRINK_BUFF_ABILITIES[abilityId] then
+					callbackFunc(...)
+				end
+			end)
+			EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
+
 			self.eventList[#self.eventList + 1] = addonEventNameSpace
 			return true
 		end
@@ -371,18 +366,8 @@ end
 function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
 	local index = ZO_IndexOfElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
 	if index then
-		local eventCounter = 0
-		local eventName
-		for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
-			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace .. eventCounter
-			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
-		end
-		for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
-			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace .. eventCounter
-			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
-		end
+		EVENT_MANAGER:UnregisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED)
+
 		table.remove(self.eventList, index)
 		return true
 	end
