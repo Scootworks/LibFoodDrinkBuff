@@ -199,46 +199,55 @@ function collector:NotificationAfterCreatingFoodDrinkTable()
 	end
 end
 
-function collector:AddToFoodDrinkTable(abilityId, saveType)
-	if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
-		if DoesAbilityExist(abilityId) then
-			local cost, mechanic = GetAbilityCost(abilityId)
-			local channeled, castTime = GetAbilityCastInfo(abilityId)
-			local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
-			if cost == 0 and mechanic == 0 and GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) and GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" and not channeled and castTime == 0 and minRangeCM == 0 and maxRangeCM == 0 and GetAbilityRadius(abilityId) == 0 and GetAbilityAngleDistance(abilityId) == 0 and GetAbilityDuration(abilityId) > 2000000 then
+do
+	local count = 0
 
-				local ability = {}
-				ability.id = abilityId
-				ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
-				ability.excel = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
+	function collector:AddToFoodDrinkTable(abilityId, saveType)
+		if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
+			if DoesAbilityExist(abilityId) then
+				local cost, mechanic = GetAbilityCost(abilityId)
+				local channeled, castTime = GetAbilityCastInfo(abilityId)
+				local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
+				if cost == 0 and mechanic == 0 and GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) and GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" and not channeled and castTime == 0 and minRangeCM == 0 and maxRangeCM == 0 and GetAbilityRadius(abilityId) == 0 and GetAbilityAngleDistance(abilityId) == 0 and GetAbilityDuration(abilityId) > 2000000 then
 
-				if saveType == ARGUMENT_ALL then
-					self.sv.list[#self.sv.list+1] = ability
-				else
-					if GetBuffTypeInfos(abilityId) == NONE then
-						self.sv.list[#self.sv.list+1] = ability
+					local ability = {}
+					ability.id = abilityId
+					ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
+					ability.excel = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
+
+					if saveType == ARGUMENT_ALL then
+						count = count + 1
+						self.sv.list[count] = ability
+					else
+						if GetBuffTypeInfos(abilityId) == NONE then
+							count = count + 1
+							self.sv.list[count] = ability
+						end
 					end
 				end
 			end
 		end
 	end
-end
 
-function collector:InitializeSlashCommands()
-	local FIRST_ABILITY = 1
-	
-	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
-		if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
-			ZO_ClearNumericallyIndexedTable(self.sv.list)
-			Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
+	function collector:InitializeSlashCommands()
+		local FIRST_ABILITY = 1
+		
+		SLASH_COMMANDS["/dumpfdb"] = function(saveType)
+			if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
+				ZO_ClearNumericallyIndexedTable(self.sv.list)
+				count = 0
+				Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
 
-			self.TaskScan:For(FIRST_ABILITY, LATEST_DISPLAY_ID):Do(function(abilityId)
-				self:AddToFoodDrinkTable(abilityId, saveType)
-			end):Then(function()
-				self:NotificationAfterCreatingFoodDrinkTable()
-			end)
-		else
-			Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
+				local time = GetGameTimeMilliseconds()
+				self.TaskScan:For(FIRST_ABILITY, LATEST_DISPLAY_ID):Do(function(abilityId)
+					self:AddToFoodDrinkTable(abilityId, saveType)
+				end):Then(function()
+					self:NotificationAfterCreatingFoodDrinkTable()
+					d(GetGameTimeMilliseconds() - time)
+				end)
+			else
+				Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
+			end
 		end
 	end
 end
