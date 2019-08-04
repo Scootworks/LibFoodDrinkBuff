@@ -2,7 +2,6 @@ local LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
 -- Author: Scootworks & Baertram
 --- Latest food & drink export: 100027 pts
-local LATEST_DISPLAY_ID = 126679 -- abilityId from UespLog AddOn "/uespdump skills abilities" or the latest displayId from esolog.uesp.net - Mined Skills
 
 local USE_PREFIX = true
 
@@ -230,8 +229,6 @@ do
 	end
 
 	function collector:InitializeSlashCommands()
-		local FIRST_ABILITY = 1
-		
 		SLASH_COMMANDS["/dumpfdb"] = function(saveType)
 			if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
 				ZO_ClearNumericallyIndexedTable(self.sv.list)
@@ -239,11 +236,10 @@ do
 				Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
 
 				local time = GetGameTimeMilliseconds()
-				self.TaskScan:For(FIRST_ABILITY, LATEST_DISPLAY_ID):Do(function(abilityId)
+				self.TaskScan:For(1, 200000):Do(function(abilityId)
 					self:AddToFoodDrinkTable(abilityId, saveType)
 				end):Then(function()
 					self:NotificationAfterCreatingFoodDrinkTable()
-					d(GetGameTimeMilliseconds() - time)
 				end)
 			else
 				Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
@@ -364,7 +360,7 @@ function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, c
 			end)
 			EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
 
-			self.eventList[#self.eventList + 1] = addonEventNameSpace
+			table.insert(self.eventList, addonEventNameSpace)
 			return true
 		end
 	end
