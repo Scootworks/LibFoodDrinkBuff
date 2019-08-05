@@ -2,7 +2,6 @@ local LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
 -- Author: Scootworks & Baertram
 --- Latest food & drink export: 100027 pts
-local LATEST_DISPLAY_ID = 126679 -- abilityId from UespLog AddOn "/uespdump skills abilities" or the latest displayId from esolog.uesp.net - Mined Skills
 
 local USE_PREFIX = true
 
@@ -199,46 +198,52 @@ function collector:NotificationAfterCreatingFoodDrinkTable()
 	end
 end
 
-function collector:AddToFoodDrinkTable(abilityId, saveType)
-	if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
-		if DoesAbilityExist(abilityId) then
-			local cost, mechanic = GetAbilityCost(abilityId)
-			local channeled, castTime = GetAbilityCastInfo(abilityId)
-			local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
-			if cost == 0 and mechanic == 0 and GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) and GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" and not channeled and castTime == 0 and minRangeCM == 0 and maxRangeCM == 0 and GetAbilityRadius(abilityId) == 0 and GetAbilityAngleDistance(abilityId) == 0 and GetAbilityDuration(abilityId) > 2000000 then
+do
+	local count = 0
 
-				local ability = {}
-				ability.id = abilityId
-				ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
-				ability.excel = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
+	function collector:AddToFoodDrinkTable(abilityId, saveType)
+		if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
+			if DoesAbilityExist(abilityId) then
+				local cost, mechanic = GetAbilityCost(abilityId)
+				local channeled, castTime = GetAbilityCastInfo(abilityId)
+				local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
+				if cost == 0 and mechanic == 0 and GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) and GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" and not channeled and castTime == 0 and minRangeCM == 0 and maxRangeCM == 0 and GetAbilityRadius(abilityId) == 0 and GetAbilityAngleDistance(abilityId) == 0 and GetAbilityDuration(abilityId) > 2000000 then
 
-				if saveType == ARGUMENT_ALL then
-					self.sv.list[#self.sv.list+1] = ability
-				else
-					if GetBuffTypeInfos(abilityId) == NONE then
-						self.sv.list[#self.sv.list+1] = ability
+					local ability = {}
+					ability.id = abilityId
+					ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
+					ability.excel = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
+
+					if saveType == ARGUMENT_ALL then
+						count = count + 1
+						self.sv.list[count] = ability
+					else
+						if GetBuffTypeInfos(abilityId) == NONE then
+							count = count + 1
+							self.sv.list[count] = ability
+						end
 					end
 				end
 			end
 		end
 	end
-end
 
-function collector:InitializeSlashCommands()
-	local FIRST_ABILITY = 1
-	
-	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
-		if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
-			ZO_ClearNumericallyIndexedTable(self.sv.list)
-			Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
+	function collector:InitializeSlashCommands()
+		SLASH_COMMANDS["/dumpfdb"] = function(saveType)
+			if saveType == ARGUMENT_ALL or saveType == ARGUMENT_NEW then
+				ZO_ClearNumericallyIndexedTable(self.sv.list)
+				count = 0
+				Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_PREFIX)
 
-			self.TaskScan:For(FIRST_ABILITY, LATEST_DISPLAY_ID):Do(function(abilityId)
-				self:AddToFoodDrinkTable(abilityId, saveType)
-			end):Then(function()
-				self:NotificationAfterCreatingFoodDrinkTable()
-			end)
-		else
-			Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
+				local time = GetGameTimeMilliseconds()
+				self.TaskScan:For(1, 200000):Do(function(abilityId)
+					self:AddToFoodDrinkTable(abilityId, saveType)
+				end):Then(function()
+					self:NotificationAfterCreatingFoodDrinkTable()
+				end)
+			else
+				Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_PREFIX)
+			end
 		end
 	end
 end
@@ -343,24 +348,19 @@ end
 -- Possible additional filterTypes are: REGISTER_FILTER_UNIT_TAG, REGISTER_FILTER_UNIT_TAG_PREFIX
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
 function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, callbackFunc, filterType, filterParameter)
+-- Returns 16: changeType, effectSlot, effectName, unitTag, beginTime, endTime, stackCount, iconName, buffType, effectType, abilityType, statusEffectType, unitName, unitId, abilityId, sourceType
 	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" and type(callbackFunc) == "function" then
 		local isElement = ZO_IsElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
 		if not isElement then
-			local eventCounter = 0
-			local eventName
-			for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
-				eventCounter = eventCounter + 1
-				eventName = addonEventNameSpace .. eventCounter
-				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
-				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
-			end
-			for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
-				eventCounter = eventCounter + 1
-				eventName = addonEventNameSpace .. eventCounter
-				EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, callbackFunc)
-				EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId, filterType, filterParameter)
-			end
-			self.eventList[#self.eventList + 1] = addonEventNameSpace
+			EVENT_MANAGER:RegisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, function(_, ...)
+				local abilityId = select(15, ...)
+				if FOOD_BUFF_ABILITIES[abilityId] or DRINK_BUFF_ABILITIES[abilityId] then
+					callbackFunc(...)
+				end
+			end)
+			EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
+
+			table.insert(self.eventList, addonEventNameSpace)
 			return true
 		end
 	end
@@ -371,18 +371,8 @@ end
 function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
 	local index = ZO_IndexOfElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
 	if index then
-		local eventCounter = 0
-		local eventName
-		for abilityId, _ in pairs(FOOD_BUFF_ABILITIES) do
-			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace .. eventCounter
-			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
-		end
-		for abilityId, _ in pairs(DRINK_BUFF_ABILITIES) do
-			eventCounter = eventCounter + 1
-			eventName = addonEventNameSpace .. eventCounter
-			EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
-		end
+		EVENT_MANAGER:UnregisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED)
+
 		table.remove(self.eventList, index)
 		return true
 	end
