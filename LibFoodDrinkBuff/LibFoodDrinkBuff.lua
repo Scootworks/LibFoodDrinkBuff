@@ -308,7 +308,7 @@ function lib:GetTimeLeftInSeconds(timeInMilliseconds)
 end
 
 function lib:GetFoodBuffInfos(unitTag)
--- Returns 7: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture, number timeLeftInSeconds
+-- Returns 8: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture, number timeLeftInSeconds
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
 		local buffName, timeStarted, timeEnding, iconTexture, abilityId, buffTypeFoodDrink, isDrink
