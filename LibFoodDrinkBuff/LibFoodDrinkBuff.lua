@@ -223,24 +223,31 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 	if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
 		if saveType == ARGUMENT_NEW and GetBuffTypeInfos(abilityId) ~= NONE then return end
 
-		local cost, mechanic = GetAbilityCost(abilityId)
-		local abilityCosts = cost == 0 and mechanic == 0
-		local channeled, castTime = GetAbilityCastInfo(abilityId)
-		local castInfo = not channeled and castTime == 0
-		local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
-		local range = minRangeCM == 0 and maxRangeCM == 0
-		local radius = GetAbilityRadius(abilityId) == 0
-		local angleDistance = GetAbilityAngleDistance(abilityId) == 0
-		local abilityDescription = GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == ""
-		local abilityTargetDescription = GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2)
-		local duration = GetAbilityDuration(abilityId) > MAX_ABILITY_DURATION
-		if abilityCosts and abilityTargetDescription and abilityDescription and castInfo and range and radius and angleDistance and duration then
-			local ability = { }
-			ability.id = abilityId
-			ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
-			ability.export = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
-			self.count = self.count + 1
-			self.sv.list[self.count] = ability
+		-- We gonna check the abilityId parameter step by step to increase performance during the check.
+		if GetAbilityDuration(abilityId) > MAX_ABILITY_DURATION then
+			if GetAbilityRadius(abilityId) == 0 then
+				if GetAbilityAngleDistance(abilityId) == 0 then
+					local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
+					if minRangeCM == 0 and maxRangeCM == 0 then
+						local cost, mechanic = GetAbilityCost(abilityId)
+						if cost == 0 and mechanic == 0 then
+							local channeled, castTime = GetAbilityCastInfo(abilityId)
+							if not channeled and castTime == 0 then
+								local abilityDescription = GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == ""
+								local abilityTargetDescription = GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2)
+								if abilityTargetDescription and abilityDescription then
+									local ability = { }
+									ability.id = abilityId
+									ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
+									ability.export = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
+									self.count = self.count + 1
+									self.sv.list[self.count] = ability
+								end
+							end
+						end
+					end
+				end
+			end
 		end
 	end
 end
@@ -253,6 +260,7 @@ function collector:InitializeSlashCommands()
 
 			self.count = 0
 			ZO_ClearNumericallyIndexedTable(self.sv.list)
+
 			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
 				if DoesAbilityExist(abilityId) then
 					self:AddToFoodDrinkTable(abilityId, saveType)
@@ -419,13 +427,18 @@ do
 	function DEBUG_ACTIVE_BUFFS(unitTag)
 		unitTag = unitTag or "player"
 
-		local buffName, abilityId
+		local buffName, abilityId, _
 		local entries = {}
 		table.insert(entries, DIVIDER)
 		table.insert(entries, AddPrefixToString(zo_strformat("Debug \"<<1>>\" Buffs:", unitTag)))
-		for i = 1, GetNumBuffs(unitTag) do
-			buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			table.insert(entries, zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
+		local numBuffs = GetNumBuffs(unitTag)
+		if numBuffs > 0 then
+			for i = 1, numBuffs do
+				buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
+				table.insert(entries, zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
+			end
+		else
+			table.insert(entries, GetString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS))
 		end
 		table.insert(entries, DIVIDER)
 

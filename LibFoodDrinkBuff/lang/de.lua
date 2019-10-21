@@ -2,3 +2,4 @@ SafeAddString(SI_LIB_FOOD_DRINK_BUFF_RELOAD, "Eure Benutzeroberfläche wird in |
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START, "Die Durchsuchung von Speisen / Getränke wurde gestartet. Das kann einige Sekunden dauern...", 0)
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, "Die Durchsuchung ist beendet. Es wurden <<1[keine Speisen oder Getränke/$d Speise oder Getränk/$d Speisen oder Getränke]>> exportiert.", 0)
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, "<<1>>!\nArgument |cFFFFFF/dumpfdb|r fehlt!\nBenutze |cFFFFFFall|r - komplette Liste generieren\noder |cFFFFFFnew|r - nur neue Speisen/Getränke generieren", 0)
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS, "Es gibt keinen aktiven Buff.", 0)

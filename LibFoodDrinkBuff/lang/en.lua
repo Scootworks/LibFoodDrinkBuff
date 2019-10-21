@@ -5,3 +5,4 @@ ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_RELOAD", "The user interface will be r
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_EXPORT_START", "Searching food / drinks has begun. This may take several seconds...")
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH", "The search is over. <<C:1[No/$d/$d]>> food / drinks were exported.")
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING", "<<1>>!\nArgument for |cFFFFFF/dumpfdb|r is missing!\nuse |cFFFFFFall|r - dumps the full list\nor |cFFFFFFnew|r - only dump new foods / drinks")
+ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS", "There is no active buff.")
