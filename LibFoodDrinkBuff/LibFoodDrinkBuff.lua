@@ -8,22 +8,6 @@ else
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
--- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
-local function GetAddonVersionFromManifest(addOnNameString)
-	addOnNameString = addOnNameString or LIB_IDENTIFIER
-	if addOnNameString then
-		local ADDON_MANAGER = GetAddOnManager()
-		local numAddOns = ADDON_MANAGER:GetNumAddOns()
-		for i = 1, numAddOns do
-			if ADDON_MANAGER:GetAddOnInfo(i) == addOnNameString then
-				return ADDON_MANAGER:GetAddOnVersion(i)
-			end
-		end
-	end
-	return nil
-end
-
-
 ----------------
 -- BUFF TYPES --
 ----------------
@@ -304,7 +288,7 @@ end
 -- FOOD AND DRINKS --
 ---------------------
 function lib:Initialize()
-	self.version = GetAddonVersionFromManifest()
+	self.version = self:GetAddonVersionFromManifest()
 	self.eventList = { }
 
 	-- the collector is only active, if you have LibAsync
@@ -312,6 +296,22 @@ function lib:Initialize()
 	if self.async then
 		collector:Initialize(self.async)
 	end
+end
+
+-- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
+function lib:GetAddonVersionFromManifest(addOnNameString)
+-- Returns 1: number nilable:addOnVersion
+	addOnNameString = addOnNameString or LIB_IDENTIFIER
+	if addOnNameString then
+		local ADDON_MANAGER = GetAddOnManager()
+		local numAddOns = ADDON_MANAGER:GetNumAddOns()
+		for i = 1, numAddOns do
+			if ADDON_MANAGER:GetAddOnInfo(i) == addOnNameString then
+				return ADDON_MANAGER:GetAddOnVersion(i)
+			end
+		end
+	end
+	return nil
 end
 
 -- Get the addOnVersion of this lib
