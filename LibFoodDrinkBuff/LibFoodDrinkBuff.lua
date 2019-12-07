@@ -8,6 +8,27 @@ else
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
+---------------
+-- LANGUAGES --
+---------------
+local LANGUAGE_ENGLISH = "en"
+local LANGUAGE_GERMAN = "de"
+local LANGUAGE_FRENCH = "fr"
+
+local LANGUAGES_SUPPORTED =
+{
+ [LANGUAGE_ENGLISH] = true,
+ [LANGUAGE_GERMAN] = true,
+ [LANGUAGE_FRENCH] = true,
+}
+
+local function IsSupportedLanguage(language)
+	if LANGUAGES_SUPPORTED[language] then
+		return true
+	end
+	return false
+end
+
 ----------------
 -- BUFF TYPES --
 ----------------
@@ -168,9 +189,9 @@ local MAX_ABILITY_DURATION = 2000000
 
 local BLACKLIST_STRING_PATTERN =
 {
-	["en"] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth" },
-	["de"] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth" },
-	["fr"] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth"},
+	[LANGUAGE_ENGLISH] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth" },
+	[LANGUAGE_GERMAN] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth" },
+	[LANGUAGE_FRENCH] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth"},
 }
 
 ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] = 
@@ -201,21 +222,18 @@ ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 
 local collector = { }
 
-function collector:Initialize(async)
-	self.sv = LibFoodDrinkBuff_Save or { }
-	self.sv.list = { }
-	self.clientLang = GetCVar("language.2")
+function collector:Initialize(async, clientLang)
+	self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save", 1, nil, {}, "Default")
+	self.sv.foodDrinkBuffList = { }
 
+	self.clientLang = clientLang
 	self.TaskScan = async:Create("FoodDrinkBuffCheck")
 
 	self:InitializeSlashCommands()
 end
 
 function collector:DoesStringContainsBlacklistPattern(abilityName)
-	local language = BLACKLIST_STRING_PATTERN[self.clientLang]
-	assert(language ~= nil, "Your client language is not supported!")
-	
-	for index, pattern in ipairs(language) do
+	for index, pattern in ipairs(BLACKLIST_STRING_PATTERN[self.clientLang]) do
 		local patternFound = abilityName:lower():find(pattern:lower())
 		if patternFound then
 			return true
@@ -225,7 +243,7 @@ function collector:DoesStringContainsBlacklistPattern(abilityName)
 end
 
 function collector:NotificationAfterCreatingFoodDrinkTable()
-	local countEntries = #self.sv.list
+	local countEntries = #self.sv.foodDrinkBuffList
 	if countEntries > 0 then
 		ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", { countEntries = countEntries })
 	else
@@ -256,7 +274,7 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 										ability.abilityId = abilityId
 										ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
 										ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
-										table.insert(self.sv.list, ability)
+										table.insert(self.sv.foodDrinkBuffList, ability)
 									end
 								end
 							end
@@ -274,7 +292,7 @@ function collector:InitializeSlashCommands()
 		if saveType then
 			lib.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
 
-			ZO_ClearNumericallyIndexedTable(self.sv.list)
+			ZO_ClearNumericallyIndexedTable(self.sv.foodDrinkBuffList)
 
 			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
 				if DoesAbilityExist(abilityId) then
@@ -298,10 +316,11 @@ function lib:Initialize()
 	self.version = self:GetAddonVersionFromManifest()
 	self.eventList = { }
 
-	-- the collector is only active, if you have LibAsync
+	-- the collector is only active, if you have LibAsync and if it's a supported client language
+	local clientLang = GetCVar("language.2")
 	self.async = LibAsync
-	if self.async then
-		collector:Initialize(self.async)
+	if self.async and IsSupportedLanguage(clientLang) then
+		collector:Initialize(self.async, clientLang)
 	end
 end
 
