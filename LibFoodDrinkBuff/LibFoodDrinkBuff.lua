@@ -166,22 +166,11 @@ local ARGUMENT_NEW = 2
 local MAX_ABILITY_ID = 2000000
 local MAX_ABILITY_DURATION = 2000000
 
-local BLACKLIST_NO_FOOD_DRINK_BUFFS =
+local BLACKLIST_STRING_PATTERN =
 {
-	[43752] = true, -- Seelenbeschwörung
-	[63570] = true, -- erhöhter Erfahrungsgewinn
-	[66776] = true, -- erhöhter Erfahrungsgewinn
-	[77123] = true, -- Jubiläums-Erfahrungsbonus
-	[85501] = true, -- erhöhter Erfahrungsgewinn
-	[85502] = true, -- erhöhter Erfahrungsgewinn
-	[85503] = true, -- erhöhter Erfahrungsgewinn
-	[86755] = true, -- Feiertags-Erfahrungsbonus
-	[91369] = true, -- erhöhter Erfahrungsgewinn der Narrenpastete
-	[92232] = true, -- Pelinals Wildheit
-	[99462] = true, -- erhöhter Erfahrungsgewinn
-	[99463] = true, -- erhöhter Erfahrungsgewinn
-	[118985] = true, -- Jubiläums-Erfahrungsbonus
-	[116467] = true, -- MillionHealth
+	["en"] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth" },
+	["de"] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth" },
+	["fr"] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth"},
 }
 
 ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] = 
@@ -209,15 +198,30 @@ ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 	},
 }
 
+
 local collector = { }
 
 function collector:Initialize(async)
 	self.sv = LibFoodDrinkBuff_Save or { }
 	self.sv.list = { }
+	self.clientLang = GetCVar("language.2")
 
 	self.TaskScan = async:Create("FoodDrinkBuffCheck")
 
 	self:InitializeSlashCommands()
+end
+
+function collector:DoesStringContainsBlacklistPattern(abilityName)
+	local language = BLACKLIST_STRING_PATTERN[self.clientLang]
+	assert(language ~= nil, "Your client language is not supported!")
+	
+	for index, pattern in ipairs(language) do
+		local patternFound = abilityName:lower():find(pattern:lower())
+		if patternFound then
+			return true
+		end
+	end
+	return false
 end
 
 function collector:NotificationAfterCreatingFoodDrinkTable()
@@ -230,25 +234,28 @@ function collector:NotificationAfterCreatingFoodDrinkTable()
 end
 
 function collector:AddToFoodDrinkTable(abilityId, saveType)
-	if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
-		if saveType == ARGUMENT_NEW and GetBuffTypeInfos(abilityId) ~= NONE then return end
+	if saveType == ARGUMENT_NEW and GetBuffTypeInfos(abilityId) ~= NONE then
+		return
+	end
 
-		-- We gonna check the abilityId parameter step by step to increase performance during the check.
-		if GetAbilityAngleDistance(abilityId) == 0 then
-			if GetAbilityRadius(abilityId) == 0 then
-				if GetAbilityDuration(abilityId) > MAX_ABILITY_DURATION then
-					local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
-					if minRangeCM == 0 and maxRangeCM == 0 then
-						local cost, mechanic = GetAbilityCost(abilityId)
-						if cost == 0 and mechanic == 0 then
-							local channeled, castTime = GetAbilityCastInfo(abilityId)
-							if not channeled and castTime == 0 then
-								if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
-									if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
+	-- We gonna check the abilityId parameter step by step to increase performance during the check.
+	if GetAbilityAngleDistance(abilityId) == 0 then
+		if GetAbilityRadius(abilityId) == 0 then
+			if GetAbilityDuration(abilityId) > MAX_ABILITY_DURATION then
+				local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
+				if minRangeCM == 0 and maxRangeCM == 0 then
+					local cost, mechanic = GetAbilityCost(abilityId)
+					if cost == 0 and mechanic == 0 then
+						local channeled, castTime = GetAbilityCastInfo(abilityId)
+						if not channeled and castTime == 0 then
+							if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
+								if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
+									local abilityName = GetAbilityName(abilityId)
+									if not self:DoesStringContainsBlacklistPattern(abilityName) then
 										local ability = { }
-										ability.id = abilityId
-										ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
-										ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
+										ability.abilityId = abilityId
+										ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
+										ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
 										table.insert(self.sv.list, ability)
 									end
 								end
