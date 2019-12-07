@@ -8,6 +8,21 @@ else
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
+-- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
+local function GetAddonVersionFromManifest(addOnNameString)
+	addOnNameString = addOnNameString or LIB_IDENTIFIER
+	if addOnNameString then
+		local ADDON_MANAGER = GetAddOnManager()
+		local numAddOns = ADDON_MANAGER:GetNumAddOns()
+		for i = 1, numAddOns do
+			if ADDON_MANAGER:GetAddOnInfo(i) == addOnNameString then
+				return ADDON_MANAGER:GetAddOnVersion(i)
+			end
+		end
+	end
+	return nil
+end
+
 
 ----------------
 -- BUFF TYPES --
@@ -289,8 +304,7 @@ end
 -- FOOD AND DRINKS --
 ---------------------
 function lib:Initialize()
-	self.version = self:GetAddonVersionFromManifest()
-
+	self.version = GetAddonVersionFromManifest()
 	self.eventList = { }
 
 	-- the collector is only active, if you have LibAsync
@@ -310,22 +324,6 @@ end
 function lib:GetEvents()
 -- Returns 1: table eventList
 	return self.eventList
-end
-
--- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
-function lib:GetAddonVersionFromManifest(addOnNameString)
--- Returns 1: number addOnVersion
-	addOnNameString = addOnNameString or LIB_IDENTIFIER
-	if addOnNameString then
-		local ADDON_MANAGER = GetAddOnManager()
-		local numAddOns = ADDON_MANAGER:GetNumAddOns()
-		for i = 1, numAddOns do
-			if ADDON_MANAGER:GetAddOnInfo(i) == addOnNameString then
-				return ADDON_MANAGER:GetAddOnVersion(i)
-			end
-		end
-	end
-	return nil
 end
 
 -- Calculate time left of a food/drink buff
