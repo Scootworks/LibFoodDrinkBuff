@@ -217,7 +217,6 @@ function collector:Initialize(async)
 	self.sv.list = { }
 
 	self.TaskScan = async:Create("FoodDrinkBuffCheck")
-	self.TaskMessage = async:Create("FoodDrinkBuffMessage")
 
 	self:InitializeSlashCommands()
 end
@@ -300,6 +299,18 @@ function lib:Initialize()
 	if self.async then
 		collector:Initialize(self.async)
 	end
+end
+
+-- Get the addOnVersion of this lib
+function lib:GetVersion()
+-- Returns 1: number version
+	return self.version
+end
+
+-- Maybe it helps for debug function to get all the active events
+function lib:GetEvents()
+-- Returns 1: table eventList
+	return self.eventList
 end
 
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
