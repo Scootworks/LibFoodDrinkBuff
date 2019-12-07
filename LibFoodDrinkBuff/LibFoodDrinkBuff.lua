@@ -224,7 +224,6 @@ end
 function collector:NotificationAfterCreatingFoodDrinkTable()
 	local countEntries = #self.sv.list
 	if countEntries > 0 then
-		local NO_DATA = nil
 		ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", { countEntries = countEntries })
 	else
 		lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
