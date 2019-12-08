@@ -1,15 +1,19 @@
 local LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
+--Was the lib loaded properly before already?
+if _G[LIB_IDENTIFIER] ~= nil then return end
+
 local lib = { }
 
 if LibChatMessage then
 	lib.chat = LibChatMessage(LIB_IDENTIFIER, "LibFDB")
 else
-	lib.chat = lib.chat or {}
+	lib.chat = {}
 end
 if not lib.chat.Print then
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
+
 
 ---------------
 -- LANGUAGES --
