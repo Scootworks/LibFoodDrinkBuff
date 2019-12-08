@@ -5,6 +5,9 @@ local lib = { }
 if LibChatMessage then
 	lib.chat = LibChatMessage(LIB_IDENTIFIER, "LibFDB")
 else
+	lib.chat = lib.chat or {}
+end
+if not lib.chat.Print then
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
