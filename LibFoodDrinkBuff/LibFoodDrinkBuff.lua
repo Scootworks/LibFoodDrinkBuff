@@ -14,7 +14,6 @@ if not lib.chat.Print then
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
-
 ---------------
 -- LANGUAGES --
 ---------------
@@ -230,13 +229,45 @@ ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 local collector = { }
 
 function collector:Initialize(async, clientLang)
-	self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save", 1, nil, {}, "Default")
-	self.sv.foodDrinkBuffList = { }
-
 	self.clientLang = clientLang
-	self.TaskScan = async:Create("FoodDrinkBuffCheck")
+	self.TaskScan = async:Create(LIB_IDENTIFIER.. "_Check")
 
 	self:InitializeSlashCommands()
+end
+
+function collector:InitializeSlashCommands()
+	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
+		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
+		if saveType then
+			lib.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
+
+			--SavedVariables
+			if not self.sv then
+				--ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
+				self.sv = ZO_SavedVars:NewAccountWide(LIB_IDENTIFIER .. "_Save", 1, GetWorldName(), {}, "Default", "AllAccounts")
+			end
+			--Clear old SavedVariables
+			self.sv.foodDrinkBuffList = { }
+			ZO_ClearNumericallyIndexedTable(self.sv.foodDrinkBuffList)
+
+			--Start new scan
+			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
+				if DoesAbilityExist(abilityId) then
+					self:AddToFoodDrinkTable(abilityId, saveType)
+				end
+			end):Then(function()
+				--Update the SavedVariabls timestamp
+				self.sv.lastUpdated = {}
+				self.sv.lastUpdated.timestamp = os.date()
+				self.sv.lastUpdated.charactername = GetUnitName("player")
+				self.sv.lastUpdated.saveType = saveType
+				self:NotificationAfterCreatingFoodDrinkTable()
+			end)
+
+		else
+			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
+		end
+	end
 end
 
 function collector:DoesStringContainsBlacklistPattern(abilityName)
@@ -263,6 +294,8 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 		return
 	end
 
+	local foodDrinkBuffList = self.sv.foodDrinkBuffList
+
 	-- We gonna check the abilityId parameter step by step to increase performance during the check.
 	if GetAbilityAngleDistance(abilityId) == 0 then
 		if GetAbilityRadius(abilityId) == 0 then
@@ -281,7 +314,7 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 										ability.abilityId = abilityId
 										ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
 										ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
-										table.insert(self.sv.foodDrinkBuffList, ability)
+										table.insert(foodDrinkBuffList, ability)
 									end
 								end
 							end
@@ -289,28 +322,6 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 					end
 				end
 			end
-		end
-	end
-end
-
-function collector:InitializeSlashCommands()
-	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
-		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
-		if saveType then
-			lib.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
-
-			ZO_ClearNumericallyIndexedTable(self.sv.foodDrinkBuffList)
-
-			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
-				if DoesAbilityExist(abilityId) then
-					self:AddToFoodDrinkTable(abilityId, saveType)
-				end
-			end):Then(function()
-				self:NotificationAfterCreatingFoodDrinkTable()
-			end)
-
-		else
-			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
 		end
 	end
 end
