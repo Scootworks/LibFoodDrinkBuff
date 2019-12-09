@@ -1,23 +1,39 @@
 local LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
--- Author: Scootworks & Baertram
---- Latest food & drink export: 100028 live
-local MAX_ABILITY_ID = 2000000
-local USE_MESSAGE_PREFIX = true
+--Was the lib loaded properly before already?
+if LIB_FOOD_DRINK_BUFF ~= nil then return end
 
-local function AddPrefixToString(string)
-	return ("|cFF0000[%s]|r %s"):format(LIB_IDENTIFIER, string)
+local lib = { }
+
+if LibChatMessage then
+	lib.chat = LibChatMessage(LIB_IDENTIFIER, "LibFDB")
+else
+	lib.chat = {}
+end
+if not lib.chat.Print then
+	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
-local function Message(message, hasPrefix)
-	message = hasPrefix and AddPrefixToString(message) or message
-	if CHAT_SYSTEM.primaryContainer then
-		CHAT_SYSTEM.primaryContainer:OnChatEvent(nil, message, CHAT_CATEGORY_SYSTEM)
-	else
-		d(message)
+---------------
+-- LANGUAGES --
+---------------
+local LANGUAGE_ENGLISH = "en"
+local LANGUAGE_GERMAN = "de"
+local LANGUAGE_FRENCH = "fr"
+
+local LANGUAGES_SUPPORTED =
+{
+ [LANGUAGE_ENGLISH] = true,
+ [LANGUAGE_GERMAN] = true,
+ [LANGUAGE_FRENCH] = true,
+}
+
+local function IsSupportedLanguage(language)
+	if LANGUAGES_SUPPORTED[language] then
+		return true
 	end
+	return false
 end
-
 
 ----------------
 -- BUFF TYPES --
@@ -164,9 +180,7 @@ local FOOD_BUFF_ABILITIES = {
 local function GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
 	local isDrinkBuff = DRINK_BUFF_ABILITIES[abilityId]
-	local isDrink = isDrinkBuff ~= nil and true or false
-	local buffTypeFoodDrink = isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or NONE
-	return buffTypeFoodDrink, isDrink
+	return (isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or NONE), (isDrinkBuff ~= nil and true or false)
 end
 
 
@@ -176,72 +190,132 @@ end
 local ARGUMENT_ALL = 1
 local ARGUMENT_NEW = 2
 
+local MAX_ABILITY_ID = 2000000
 local MAX_ABILITY_DURATION = 2000000
 
-local BLACKLIST_NO_FOOD_DRINK_BUFFS =
+local BLACKLIST_STRING_PATTERN =
 {
-	[43752] = true, -- Seelenbeschwörung
-	[63570] = true, -- erhöhter Erfahrungsgewinn
-	[66776] = true, -- erhöhter Erfahrungsgewinn
-	[77123] = true, -- Jubiläums-Erfahrungsbonus
-	[85501] = true, -- erhöhter Erfahrungsgewinn
-	[85502] = true, -- erhöhter Erfahrungsgewinn
-	[85503] = true, -- erhöhter Erfahrungsgewinn
-	[86755] = true, -- Feiertags-Erfahrungsbonus
-	[91369] = true, -- erhöhter Erfahrungsgewinn der Narrenpastete
-	[92232] = true, -- Pelinals Wildheit
-	[99462] = true, -- erhöhter Erfahrungsgewinn
-	[99463] = true, -- erhöhter Erfahrungsgewinn
-	[118985] = true, -- Jubiläums-Erfahrungsbonus
-	[116467] = true, -- MillionHealth
+	[LANGUAGE_ENGLISH] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth" },
+	[LANGUAGE_GERMAN] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth" },
+	[LANGUAGE_FRENCH] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth"},
 }
+
+ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] = 
+{
+	title =
+	{
+		text = SI_LIB_FOOD_DRINK_BUFF_DIALOG_TITLE,
+	},
+	mainText = 
+	{
+		-- text = SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT,
+		text = function(dialog) return zo_strformat(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, dialog.data.countEntries) end
+	},
+	buttons =
+	{
+		[1] =
+		{
+			text = SI_DIALOG_YES,
+			callback = function() ReloadUI("ingame") end,
+		},
+		[2] =
+		{
+			text = SI_DIALOG_NO,
+		},
+	},
+}
+
 
 local collector = { }
 
-function collector:Initialize(async)
-	self.count = 0
-
-	self.sv = ZO_SavedVars:NewAccountWide("LibFoodDrinkBuff_Save")
-	self.sv.list = { }
-
-	self.TaskScan = async:Create("FoodDrinkBuffCheck")
-	self.TaskMessage = async:Create("FoodDrinkBuffMessage")
+function collector:Initialize(async, clientLang)
+	self.clientLang = clientLang
+	self.TaskScan = async:Create(LIB_IDENTIFIER.. "_Check")
 
 	self:InitializeSlashCommands()
 end
 
+function collector:InitializeSlashCommands()
+	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
+		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
+		if saveType then
+			lib.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
+
+			--SavedVariables
+			if not self.sv then
+				--ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
+				self.sv = ZO_SavedVars:NewAccountWide(LIB_IDENTIFIER .. "_Save", 1, GetWorldName(), {}, "Default", "AllAccounts")
+			end
+			--Clear old SavedVariables
+			self.sv.foodDrinkBuffList = { }
+			ZO_ClearNumericallyIndexedTable(self.sv.foodDrinkBuffList)
+
+			--Start new scan
+			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
+				if DoesAbilityExist(abilityId) then
+					self:AddToFoodDrinkTable(abilityId, saveType)
+				end
+			end):Then(function()
+				--Update the SavedVariabls timestamp
+				self.sv.lastUpdated = {}
+				self.sv.lastUpdated.timestamp = os.date()
+				self.sv.lastUpdated.charactername = GetUnitName("player")
+				self.sv.lastUpdated.saveType = saveType
+				self:NotificationAfterCreatingFoodDrinkTable()
+			end)
+
+		else
+			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
+		end
+	end
+end
+
+function collector:DoesStringContainsBlacklistPattern(abilityName)
+	for index, pattern in ipairs(BLACKLIST_STRING_PATTERN[self.clientLang]) do
+		local patternFound = abilityName:lower():find(pattern:lower())
+		if patternFound then
+			return true
+		end
+	end
+	return false
+end
+
 function collector:NotificationAfterCreatingFoodDrinkTable()
-	local countEntries = #self.sv.list
-	Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries), USE_MESSAGE_PREFIX)
+	local countEntries = #self.sv.foodDrinkBuffList
 	if countEntries > 0 then
-		Message(GetString(SI_LIB_FOOD_DRINK_BUFF_RELOAD), USE_MESSAGE_PREFIX)
-		self.TaskMessage:Delay(5000, function() ReloadUI("ingame") end)
+		ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", { countEntries = countEntries })
+	else
+		lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
 	end
 end
 
 function collector:AddToFoodDrinkTable(abilityId, saveType)
-	if not BLACKLIST_NO_FOOD_DRINK_BUFFS[abilityId] then
-		if saveType == ARGUMENT_NEW and GetBuffTypeInfos(abilityId) ~= NONE then return end
+	if saveType == ARGUMENT_NEW and GetBuffTypeInfos(abilityId) ~= NONE then
+		return
+	end
 
-		-- We gonna check the abilityId parameter step by step to increase performance during the check.
-		if GetAbilityDuration(abilityId) > MAX_ABILITY_DURATION then
-			if GetAbilityRadius(abilityId) == 0 then
-				if GetAbilityAngleDistance(abilityId) == 0 then
-					local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
-					if minRangeCM == 0 and maxRangeCM == 0 then
-						local cost, mechanic = GetAbilityCost(abilityId)
-						if cost == 0 and mechanic == 0 then
-							local channeled, castTime = GetAbilityCastInfo(abilityId)
-							if not channeled and castTime == 0 then
-								local abilityDescription = GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == ""
-								local abilityTargetDescription = GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2)
-								if abilityTargetDescription and abilityDescription then
-									local ability = { }
-									ability.id = abilityId
-									ability.name = ZO_CachedStrFormat(SI_ABILITY_NAME, GetAbilityName(abilityId))
-									ability.export = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.name)
-									self.count = self.count + 1
-									self.sv.list[self.count] = ability
+	local foodDrinkBuffList = self.sv.foodDrinkBuffList
+
+	-- We gonna check the abilityId parameter step by step to increase performance during the check.
+	if GetAbilityAngleDistance(abilityId) == 0 then
+		if GetAbilityRadius(abilityId) == 0 then
+			if GetAbilityDuration(abilityId) > MAX_ABILITY_DURATION then
+				local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
+				if minRangeCM == 0 and maxRangeCM == 0 then
+					local cost, mechanic = GetAbilityCost(abilityId)
+					if cost == 0 and mechanic == 0 then
+						local channeled, castTime = GetAbilityCastInfo(abilityId)
+						if not channeled and castTime == 0 then
+							if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
+								if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
+									local abilityName = GetAbilityName(abilityId)
+									if not self:DoesStringContainsBlacklistPattern(abilityName) then
+										local ability = { }
+										ability.abilityId = abilityId
+										ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
+										ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
+										table.insert(foodDrinkBuffList, ability)
+									end
 								end
 							end
 						end
@@ -252,50 +326,25 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 	end
 end
 
-function collector:InitializeSlashCommands()
-	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
-		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
-		if saveType then
-			Message(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START), USE_MESSAGE_PREFIX)
-
-			self.count = 0
-			ZO_ClearNumericallyIndexedTable(self.sv.list)
-
-			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
-				if DoesAbilityExist(abilityId) then
-					self:AddToFoodDrinkTable(abilityId, saveType)
-				end
-			end):Then(function()
-				self:NotificationAfterCreatingFoodDrinkTable()
-			end)
-
-		else
-			Message(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)), USE_MESSAGE_PREFIX)
-		end
-	end
-end
-
 
 ---------------------
 -- FOOD AND DRINKS --
 ---------------------
-local lib = { }
-
 function lib:Initialize()
 	self.version = self:GetAddonVersionFromManifest()
-
 	self.eventList = { }
 
-	-- the collector is only active, if you have LibAsync
-	self.async = LibAsync or (LibStub and LibStub("LibAsync", true))
-	if self.async then
-		collector:Initialize(self.async)
+	-- the collector is only active, if you have LibAsync and if it's a supported client language
+	local clientLang = GetCVar("language.2")
+	self.async = LibAsync
+	if self.async and IsSupportedLanguage(clientLang) then
+		collector:Initialize(self.async, clientLang)
 	end
 end
 
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
 function lib:GetAddonVersionFromManifest(addOnNameString)
--- Returns 1: number addOnVersion
+-- Returns 1: number nilable:addOnVersion
 	addOnNameString = addOnNameString or LIB_IDENTIFIER
 	if addOnNameString then
 		local ADDON_MANAGER = GetAddOnManager()
@@ -307,6 +356,18 @@ function lib:GetAddonVersionFromManifest(addOnNameString)
 		end
 	end
 	return nil
+end
+
+-- Get the addOnVersion of this lib
+function lib:GetVersion()
+-- Returns 1: number version
+	return self.version
+end
+
+-- Maybe it helps for debug function to get all the active events
+function lib:GetEvents()
+-- Returns 1: table eventList
+	return self.eventList
 end
 
 -- Calculate time left of a food/drink buff
@@ -381,15 +442,15 @@ function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, c
 	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" and type(callbackFunc) == "function" then
 		local isElement = ZO_IsElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
 		if not isElement then
-
 			EVENT_MANAGER:RegisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, function(_, ...)
 				local abilityId = select(15, ...)
 				if FOOD_BUFF_ABILITIES[abilityId] or DRINK_BUFF_ABILITIES[abilityId] then
 					callbackFunc(...)
 				end
 			end)
-			EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
-
+			if filterType and filterParameter then
+				EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
+			end
 			table.insert(self.eventList, addonEventNameSpace)
 			return true
 		end
@@ -399,11 +460,10 @@ end
 
 -- Unregister the register function above
 function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
-	local index = ZO_IndexOfElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
-	if index then
+	local data = ZO_IndexOfElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
+	if data then
 		EVENT_MANAGER:UnregisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED)
-
-		table.remove(self.eventList, index)
+		table.remove(self.eventList, data)
 		return true
 	end
 	return nil
@@ -421,29 +481,23 @@ EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoade
 -------------
 -- GLOBALS --
 -------------
-do
-	local DIVIDER = ZO_ERROR_COLOR:Colorize("____________________________________")
+function DEBUG_ACTIVE_BUFFS(unitTag)
+	unitTag = unitTag or "player"
 
-	function DEBUG_ACTIVE_BUFFS(unitTag)
-		unitTag = unitTag or "player"
-
-		local buffName, abilityId, _
-		local entries = {}
-		table.insert(entries, DIVIDER)
-		table.insert(entries, AddPrefixToString(zo_strformat("Debug \"<<1>>\" Buffs:", unitTag)))
-		local numBuffs = GetNumBuffs(unitTag)
-		if numBuffs > 0 then
-			for i = 1, numBuffs do
-				buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-				table.insert(entries, zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
-			end
-		else
-			table.insert(entries, GetString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS))
+	local entries = {}
+	table.insert(entries, zo_strformat("Debug \"<<1>>\" Buffs:", unitTag))
+	local buffName, abilityId, _
+	local numBuffs = GetNumBuffs(unitTag)
+	if numBuffs > 0 then
+		for i = 1, numBuffs do
+			buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
+			table.insert(entries, zo_strformat("<<1>>. [<<2>>] <<C:3>>", i, abilityId, ZO_SELECTED_TEXT:Colorize(buffName)))
 		end
-		table.insert(entries, DIVIDER)
-
-		Message(table.concat(entries, "\n"))
+	else
+		table.insert(entries, GetString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS))
 	end
+
+	lib.chat:Print(table.concat(entries, "\n"))
 end
 
 LIB_FOOD_DRINK_BUFF = lib
