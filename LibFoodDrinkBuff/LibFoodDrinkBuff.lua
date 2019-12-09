@@ -1,7 +1,7 @@
 local LIB_IDENTIFIER = "LibFoodDrinkBuff"
 
 --Was the lib loaded properly before already?
-if _G[LIB_IDENTIFIER] ~= nil then return end
+if LIB_FOOD_DRINK_BUFF ~= nil then return end
 
 local lib = { }
 
