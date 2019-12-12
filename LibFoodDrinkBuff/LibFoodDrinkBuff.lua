@@ -40,10 +40,6 @@ local function GetClientLang()
 	return LANGUAGES_SUPPORTED[language] and language or LANGUAGE_ENGLISH
 end
 
-local function IsSupportedLanguage()
-	return LANGUAGES_SUPPORTED[lib.clientLanguage] == true or false
-end
-
 local function DoesStringContainsBlacklistPattern(text)
 	local patternFound
 	local blacklistStringPattern = BLACKLIST_STRING_PATTERN[lib.clientLanguage]
@@ -339,7 +335,7 @@ function lib:Initialize()
 
 	-- the collector is only active, if you have LibAsync and if it's a supported client language
 	self.async = LibAsync
-	if self.async and IsSupportedLanguage() then
+	if self.async then
 		collector:Initialize(self.async)
 	end
 end
