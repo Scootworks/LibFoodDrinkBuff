@@ -28,12 +28,36 @@ local LANGUAGES_SUPPORTED =
  [LANGUAGE_FRENCH] = true,
 }
 
-local function IsSupportedLanguage(language)
-	if LANGUAGES_SUPPORTED[language] then
-		return true
+local BLACKLIST_STRING_PATTERN =
+{
+	[LANGUAGE_ENGLISH] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth", "Ambrosia" },
+	[LANGUAGE_GERMAN] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth", "Ambrosia" },
+	[LANGUAGE_FRENCH] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth", "Ambroisie" },
+}
+
+local function GetClientLang()
+	local language = GetCVar("language.2")
+	return LANGUAGES_SUPPORTED[language] and language or LANGUAGE_ENGLISH
+end
+
+local function IsSupportedLanguage()
+	return LANGUAGES_SUPPORTED[lib.clientLanguage] == true or false
+end
+
+local function DoesStringContainsBlacklistPattern(text)
+	local patternFound
+	local blacklistStringPattern = BLACKLIST_STRING_PATTERN[lib.clientLanguage]
+	for index, pattern in ipairs(blacklistStringPattern) do
+		patternFound = text:lower():find(pattern:lower())
+		if patternFound then
+			return true
+		end
 	end
 	return false
 end
+
+lib.clientLanguage = GetClientLang()
+
 
 ----------------
 -- BUFF TYPES --
@@ -193,13 +217,6 @@ local ARGUMENT_NEW = 2
 local MAX_ABILITY_ID = 2000000
 local MAX_ABILITY_DURATION = 2000000
 
-local BLACKLIST_STRING_PATTERN =
-{
-	[LANGUAGE_ENGLISH] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth" },
-	[LANGUAGE_GERMAN] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth" },
-	[LANGUAGE_FRENCH] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth"},
-}
-
 ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] = 
 {
 	title =
@@ -208,7 +225,6 @@ ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 	},
 	mainText = 
 	{
-		-- text = SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT,
 		text = function(dialog) return zo_strformat(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, dialog.data.countEntries) end
 	},
 	buttons =
@@ -228,10 +244,8 @@ ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 
 local collector = { }
 
-function collector:Initialize(async, clientLang)
-	self.clientLang = clientLang
+function collector:Initialize(async)
 	self.TaskScan = async:Create(LIB_IDENTIFIER.. "_Check")
-
 	self:InitializeSlashCommands()
 end
 
@@ -241,25 +255,24 @@ function collector:InitializeSlashCommands()
 		if saveType then
 			lib.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
 
-			--SavedVariables
+			-- get/set savedVars
 			if not self.sv then
-				--ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
-				self.sv = ZO_SavedVars:NewAccountWide(LIB_IDENTIFIER .. "_Save", 1, GetWorldName(), {}, "Default", "AllAccounts")
+				LibFoodDrinkBuff_Save = LibFoodDrinkBuff_Save or { }
+				self.sv = LibFoodDrinkBuff_Save
+				LibFoodDrinkBuff_Save = self.sv 
 			end
-			--Clear old SavedVariables
+			-- clear old savedVars
 			self.sv.foodDrinkBuffList = { }
-			ZO_ClearNumericallyIndexedTable(self.sv.foodDrinkBuffList)
 
-			--Start new scan
+			-- start new scan
 			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
 				if DoesAbilityExist(abilityId) then
 					self:AddToFoodDrinkTable(abilityId, saveType)
 				end
 			end):Then(function()
-				--Update the SavedVariabls timestamp
-				self.sv.lastUpdated = {}
+				-- update the savedVars timestamp
+				self.sv.lastUpdated = { }
 				self.sv.lastUpdated.timestamp = os.date()
-				self.sv.lastUpdated.charactername = GetUnitName("player")
 				self.sv.lastUpdated.saveType = saveType
 				self:NotificationAfterCreatingFoodDrinkTable()
 			end)
@@ -270,20 +283,11 @@ function collector:InitializeSlashCommands()
 	end
 end
 
-function collector:DoesStringContainsBlacklistPattern(abilityName)
-	for index, pattern in ipairs(BLACKLIST_STRING_PATTERN[self.clientLang]) do
-		local patternFound = abilityName:lower():find(pattern:lower())
-		if patternFound then
-			return true
-		end
-	end
-	return false
-end
-
 function collector:NotificationAfterCreatingFoodDrinkTable()
 	local countEntries = #self.sv.foodDrinkBuffList
 	if countEntries > 0 then
-		ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", { countEntries = countEntries })
+		local data = { countEntries = countEntries }
+		ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", data)
 	else
 		lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
 	end
@@ -294,8 +298,6 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 		return
 	end
 
-	local foodDrinkBuffList = self.sv.foodDrinkBuffList
-
 	-- We gonna check the abilityId parameter step by step to increase performance during the check.
 	if GetAbilityAngleDistance(abilityId) == 0 then
 		if GetAbilityRadius(abilityId) == 0 then
@@ -303,18 +305,18 @@ function collector:AddToFoodDrinkTable(abilityId, saveType)
 				local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
 				if minRangeCM == 0 and maxRangeCM == 0 then
 					local cost, mechanic = GetAbilityCost(abilityId)
-					if cost == 0 and mechanic == 0 then
+					if cost == 0 and mechanic == POWERTYPE_MAGICKA then
 						local channeled, castTime = GetAbilityCastInfo(abilityId)
 						if not channeled and castTime == 0 then
 							if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
 								if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
 									local abilityName = GetAbilityName(abilityId)
-									if not self:DoesStringContainsBlacklistPattern(abilityName) then
+									if not DoesStringContainsBlacklistPattern(abilityName) then
 										local ability = { }
 										ability.abilityId = abilityId
 										ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
 										ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
-										table.insert(foodDrinkBuffList, ability)
+										table.insert(self.sv.foodDrinkBuffList, ability)
 									end
 								end
 							end
@@ -331,14 +333,14 @@ end
 -- FOOD AND DRINKS --
 ---------------------
 function lib:Initialize()
+	self.addOnManager = GetAddOnManager()
 	self.version = self:GetAddonVersionFromManifest()
 	self.eventList = { }
 
 	-- the collector is only active, if you have LibAsync and if it's a supported client language
-	local clientLang = GetCVar("language.2")
 	self.async = LibAsync
-	if self.async and IsSupportedLanguage(clientLang) then
-		collector:Initialize(self.async, clientLang)
+	if self.async and IsSupportedLanguage() then
+		collector:Initialize(self.async)
 	end
 end
 
@@ -347,11 +349,10 @@ function lib:GetAddonVersionFromManifest(addOnNameString)
 -- Returns 1: number nilable:addOnVersion
 	addOnNameString = addOnNameString or LIB_IDENTIFIER
 	if addOnNameString then
-		local ADDON_MANAGER = GetAddOnManager()
-		local numAddOns = ADDON_MANAGER:GetNumAddOns()
+		local numAddOns = self.addOnManager:GetNumAddOns()
 		for i = 1, numAddOns do
-			if ADDON_MANAGER:GetAddOnInfo(i) == addOnNameString then
-				return ADDON_MANAGER:GetAddOnVersion(i)
+			if self.addOnManager:GetAddOnInfo(i) == addOnNameString then
+				return self.addOnManager:GetAddOnVersion(i)
 			end
 		end
 	end
@@ -371,13 +372,13 @@ function lib:GetEvents()
 end
 
 -- Calculate time left of a food/drink buff
-function lib:GetTimeLeftInSeconds(timeInMilliseconds)
+function lib:GetTimeLeftInSeconds(timeEndingInMilliseconds)
 -- Returns 1: number seconds
-	return math.max(zo_roundToNearest(timeInMilliseconds-(GetGameTimeMilliseconds()/1000), 1), 0)
+	return math.max(zo_roundToNearest(timeEndingInMilliseconds - GetGameTimeMilliseconds() / 1000, 1), 0)
 end
 
 function lib:GetFoodBuffInfos(unitTag)
--- Returns 8: number buffTypeFoodDrink, bool isDrink, number abilityId, string buffName, number timeStarted, number timeEnds, string iconTexture, number timeLeftInSeconds
+-- Returns 8: number buffTypeFoodDrink, bool nilable:isDrink, number nilable:abilityId, string nilable:buffName, number nilable:timeStarted, number nilable:timeEnds, string nilable:iconTexture, number timeLeftInSeconds
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
 		local buffName, timeStarted, timeEnding, iconTexture, abilityId, buffTypeFoodDrink, isDrink
@@ -390,7 +391,7 @@ function lib:GetFoodBuffInfos(unitTag)
 			end
 		end
 	end
-	return NONE, nil, nil, nil, nil, nil, nil, nil
+	return NONE, nil, nil, nil, nil, nil, nil, 0
 end
 
 function lib:IsFoodBuffActive(unitTag)
@@ -410,7 +411,7 @@ function lib:IsFoodBuffActive(unitTag)
 end
 
 function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
--- Returns 3: bool isBuffActive, number timeLeftInSeconds, number abilityId
+-- Returns 3: bool isBuffActive, number timeLeftInSeconds, number nilable:abilityId
 	local numBuffs = GetNumBuffs(unitTag)
 	if numBuffs > 0 then
 		local timeEnding, abilityId, buffTypeFoodDrink
@@ -428,42 +429,102 @@ end
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
 	local buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
-	if buffTypeFoodDrink ~= NONE then
-		return isDrink
-	end
-	return nil
+	return buffTypeFoodDrink ~= NONE and isDrink or nil
 end
 
--- Filter the event EVENT_EFFECT_CHANGED to the local player and only the abilityIds of the food/drink buffs
--- Possible additional filterTypes are: REGISTER_FILTER_UNIT_TAG, REGISTER_FILTER_UNIT_TAG_PREFIX
---> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
-function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace, callbackFunc, filterType, filterParameter)
--- Returns 16: changeType, effectSlot, effectName, unitTag, beginTime, endTime, stackCount, iconName, buffType, effectType, abilityType, statusEffectType, unitName, unitId, abilityId, sourceType
-	if type(addonEventNameSpace) == "string" and addonEventNameSpace ~= "" and type(callbackFunc) == "function" then
-		local isElement = ZO_IsElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
-		if not isElement then
-			EVENT_MANAGER:RegisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, function(_, ...)
-				local abilityId = select(15, ...)
-				if FOOD_BUFF_ABILITIES[abilityId] or DRINK_BUFF_ABILITIES[abilityId] then
-					callbackFunc(...)
-				end
-			end)
-			if filterType and filterParameter then
-				EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
+function lib:IsConsumableItem(bagId, slotIndex)
+-- Returns 1: bool isConsumableItem
+	local itemType = GetItemType(bagId, slotIndex)
+	if itemType == ITEMTYPE_DRINK or itemType == ITEMTYPE_FOOD then
+		return DoesStringContainsBlacklistPattern(GetItemName(bagId, slotIndex)) == false
+	end
+	return false
+end
+
+function lib:ConsumeItemFromInventory(slotIndex)
+-- Returns 1: bool successfulConsummation
+	local usable, usableOnlyFromActionSlot = IsItemUsable(BAG_BACKPACK, slotIndex)
+	local canInteract = CanInteractWithItem(BAG_BACKPACK, slotIndex)
+	if usable and canInteract and not usableOnlyFromActionSlot then
+		if self:IsConsumableItem(BAG_BACKPACK, slotIndex) then
+			if IsProtectedFunction("UseItem") then
+				return CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
+			else
+				return UseItem(BAG_BACKPACK, slotIndex)
 			end
-			table.insert(self.eventList, addonEventNameSpace)
-			return true
+		end
+	end
+	return false
+end
+
+function lib:GetConsumablesItemListFromInventory()
+-- Returns 1: table consumableItemsInInventory
+	return PLAYER_INVENTORY:GenerateListOfVirtualStackedItems(INVENTORY_BACKPACK, function(bagId, slotIndex)
+		return self:IsConsumableItem(bagId, slotIndex)
+	end)
+end
+
+
+------------
+-- EVENTS --
+------------
+local function GetIndexOfNamespaceInEventsList(table, element)
+	for index, value in ipairs(table) do
+		if value.addonEventNamespace == element then
+			return index
 		end
 	end
 	return nil
 end
 
+-- Filter the event EVENT_EFFECT_CHANGED to the local player and only the abilityIds of the food/drink buffs
+-- Possible additional filterTypes are:
+-- REGISTER_FILTER_UNIT_TAG, REGISTER_FILTER_UNIT_TAG_PREFIX or more https://wiki.esoui.com/AddFilterForEvent ,
+-- but DO NOT USE the filterType REGISTER_FILTER_ABILITY_ID, because this is already handled by the function (RegisterAbilityIdsFilterOnEventEffectChanged) itself!
+--> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
+function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace, callbackFunc, ...)
+-- Returns 1: nilable:succesfulRegister
+	local typeNamespace = type(addonEventNamespace) == "string"
+	if typeNamespace then
+		assert(addonEventNamespace ~= "", LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is an empty string.")
+		assert(type(callbackFunc) == "function", LIB_IDENTIFIER .. ": Parameter 'callbackFunc' is not a function.")
+
+		local index = GetIndexOfNamespaceInEventsList(self.eventList, addonEventNameSpace)
+		if not index then
+			EVENT_MANAGER:RegisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, function(_, ...)
+				local abilityId = select(15, ...)
+				if FOOD_BUFF_ABILITIES[abilityId] or DRINK_BUFF_ABILITIES[abilityId] then
+					callbackFunc(...)
+					-- Returns 16: changeType, effectSlot, effectName, unitTag, beginTime, endTime, stackCount, iconName, buffType, effectType, abilityType, statusEffectType, unitName, unitId, abilityId, sourceType
+				end
+			end)
+
+			-- Multiple filters are handled here:
+			-- ... is a table like { filterType1, filterParameter1, filterType2, filterParameter2, filterType3, filterParameter3, ... }
+			local filterParams = { ... }
+			if next(filterParams) then
+				for i = 1, select("#", filterParams), 2 do
+					local filterType = select(i, filterParams)
+					local filterParameter = select(i + 1, filterParams)
+					EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
+				end
+			end
+
+			table.insert(self.eventList, { addonEventNamespace = addonEventNamespace, callbackFunc = callbackFunc, filterParams = filterParams })
+			return true
+		end
+	end
+	assert(typeNamespace, LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is not a string.")
+	return nil
+end
+
 -- Unregister the register function above
-function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNameSpace)
-	local data = ZO_IndexOfElementInNumericallyIndexedTable(self.eventList, addonEventNameSpace)
-	if data then
-		EVENT_MANAGER:UnregisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED)
-		table.remove(self.eventList, data)
+function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace)
+-- Returns 1: nilable:succesfulUnregister
+	local index = GetIndexOfNamespaceInEventsList(self.eventList, addonEventNamespace)
+	if index then
+		EVENT_MANAGER:UnregisterForEvent(addonEventNamespace, EVENT_EFFECT_CHANGED)
+		table.remove(self.eventList, index)
 		return true
 	end
 	return nil
