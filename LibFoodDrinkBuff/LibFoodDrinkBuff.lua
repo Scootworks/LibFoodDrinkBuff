@@ -1,7 +1,6 @@
 local LIB_IDENTIFIER = "LibFoodDrinkBuff"
+assert(not LIB_FOOD_DRINK_BUFF, LIB_IDENTIFIER .. " is already loaded")
 
---Was the lib loaded properly before already?
-if LIB_FOOD_DRINK_BUFF ~= nil then return end
 
 local lib = { }
 
@@ -497,6 +496,7 @@ function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace, c
 
 			-- Multiple filters are handled here:
 			-- ... is a table like { filterType1, filterParameter1, filterType2, filterParameter2, filterType3, filterParameter3, ... }
+			-- You can only have one filterParameter for each filterType.
 			local filterParams = { ... }
 			if next(filterParams) then
 				for i = 1, select("#", filterParams), 2 do
