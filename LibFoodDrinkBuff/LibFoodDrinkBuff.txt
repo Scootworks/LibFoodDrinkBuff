@@ -1,7 +1,7 @@
 ## APIVersion: 100029 100030
 ## Title: LibFoodDrinkBuff
-## Version: 12
-## AddOnVersion: 12
+## Version: 14
+## AddOnVersion: 14
 ## IsLibrary: true
 ## Author: Scootworks
 ## SavedVariables: LibFoodDrinkBuff_Save

@@ -4,12 +4,10 @@ assert(not LIB_FOOD_DRINK_BUFF, LIB_IDENTIFIER .. " is already loaded")
 
 local lib = { }
 
+lib.chat = {}
 if LibChatMessage then
 	lib.chat = LibChatMessage(LIB_IDENTIFIER, "LibFDB")
-else
-	lib.chat = {}
-end
-if not lib.chat.Print then
+elseif not lib.chat.Print then
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
@@ -142,6 +140,7 @@ local DRINK_BUFF_ABILITIES = {
 	[92476] = REGEN_HEALTH_STAMINA, -- Health & Stamina Recovery
 	[100488] = MAX_ALL, -- Spring-Loaded Infusion
 	[127531] = MAX_HEALTH_MAGICKA, -- Disastrously Bloody Mara
+	[127572] = MAX_HEALTH_STAMINA_WEREWOLF, -- Pack Leader's Bone Broth
 }
 
 local FOOD_BUFF_ABILITIES = {
@@ -189,7 +188,6 @@ local FOOD_BUFF_ABILITIES = {
 	[107748] = MAX_HEALTH_MAGICKA_FISH, -- Lure Allure
 	[107789] = MAX_HEALTH_STAMINA_REGEN_HEALTH_STAMINA, -- Artaeum Takeaway Broth
 	[127537] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
-	[127572] = MAX_HEALTH_STAMINA_WEREWOLF, -- Pack Leader's Bone Broth
 	[127578] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
 	[127596] = MAX_ALL_REGEN_HEALTH, -- Bewitched Sugar Skulls
 	[127619] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
@@ -198,8 +196,16 @@ local FOOD_BUFF_ABILITIES = {
 
 local function GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
-	local isDrinkBuff = DRINK_BUFF_ABILITIES[abilityId]
-	return (isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or NONE), (isDrinkBuff ~= nil and true or false)
+	local drinkBuffType = DRINK_BUFF_ABILITIES[abilityId]
+	if drinkBuffType then
+		return drinkBuffType, true
+	end
+	local foodBuffType = FOOD_BUFF_ABILITIES[abilityId]
+	if foodBuffType then
+		return foodBuffType, false
+	end
+	return NONE, nil
+	-- return (isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or NONE), (isDrinkBuff ~= nil and true or false)
 end
 
 
@@ -423,8 +429,8 @@ end
 
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
-	local buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
-	return buffTypeFoodDrink ~= NONE and isDrink or nil
+	local _, isDrink = GetBuffTypeInfos(abilityId)
+	return isDrink
 end
 
 function lib:IsConsumableItem(bagId, slotIndex)
