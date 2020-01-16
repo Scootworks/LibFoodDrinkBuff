@@ -196,8 +196,16 @@ local FOOD_BUFF_ABILITIES = {
 
 local function GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
-	local isDrinkBuff = DRINK_BUFF_ABILITIES[abilityId]
-	return (isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or NONE), (isDrinkBuff ~= nil and true or false)
+	local drinkBuffType = DRINK_BUFF_ABILITIES[abilityId]
+	if drinkBuffType then
+		return drinkBuffType, true
+	end
+	local foodBuffType = FOOD_BUFF_ABILITIES[abilityId]
+	if foodBuffType then
+		return foodBuffType, false
+	end
+	return NONE, nil
+	-- return (isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or NONE), (isDrinkBuff ~= nil and true or false)
 end
 
 
@@ -421,8 +429,8 @@ end
 
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
-	local buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
-	return buffTypeFoodDrink ~= NONE and isDrink or nil
+	local _, isDrink = GetBuffTypeInfos(abilityId)
+	return isDrink
 end
 
 function lib:IsConsumableItem(bagId, slotIndex)
