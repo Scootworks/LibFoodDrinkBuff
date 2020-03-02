@@ -20,9 +20,9 @@ local LANGUAGE_FRENCH = "fr"
 
 local LANGUAGES_SUPPORTED =
 {
- [LANGUAGE_ENGLISH] = true,
- [LANGUAGE_GERMAN] = true,
- [LANGUAGE_FRENCH] = true,
+	[LANGUAGE_ENGLISH] = true,
+	[LANGUAGE_GERMAN] = true,
+	[LANGUAGE_FRENCH] = true,
 }
 
 local BLACKLIST_STRING_PATTERN =
@@ -48,8 +48,6 @@ local function DoesStringContainsBlacklistPattern(text)
 	end
 	return false
 end
-
-lib.clientLanguage = GetClientLang()
 
 
 ----------------
@@ -335,6 +333,7 @@ end
 ---------------------
 function lib:Initialize()
 	self.addOnManager = GetAddOnManager()
+	self.clientLanguage = GetClientLang()
 	self.version = self:GetAddonVersionFromManifest()
 	self.eventList = { }
 
