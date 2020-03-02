@@ -7,7 +7,8 @@ local lib = { }
 lib.chat = {}
 if LibChatMessage then
 	lib.chat = LibChatMessage(LIB_IDENTIFIER, "LibFDB")
-elseif not lib.chat.Print then
+end
+if not lib.chat.Print then
 	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
 end
 
@@ -203,7 +204,6 @@ local function GetBuffTypeInfos(abilityId)
 		return foodBuffType, false
 	end
 	return NONE, nil
-	-- return (isDrinkBuff or FOOD_BUFF_ABILITIES[abilityId] or NONE), (isDrinkBuff ~= nil and true or false)
 end
 
 
@@ -244,7 +244,7 @@ ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 local collector = { }
 
 function collector:Initialize(async)
-	self.TaskScan = async:Create(LIB_IDENTIFIER.. "_Check")
+	self.TaskScan = async:Create(LIB_IDENTIFIER.. "_Collector")
 	self:InitializeSlashCommands()
 end
 
@@ -337,7 +337,7 @@ function lib:Initialize()
 	self.version = self:GetAddonVersionFromManifest()
 	self.eventList = { }
 
-	-- the collector is only active, if you have LibAsync and if it's a supported client language
+	-- the collector is only active, if you have LibAsync
 	self.async = LibAsync
 	if self.async then
 		collector:Initialize(self.async)
@@ -357,6 +357,12 @@ function lib:GetAddonVersionFromManifest(addOnNameString)
 		end
 	end
 	return nil
+end
+
+-- Get the clientLanguage of this lib
+function lib:GetLanguage()
+-- Returns 1: string language
+	return self.clientLanguage
 end
 
 -- Get the addOnVersion of this lib
@@ -416,7 +422,7 @@ function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 	if numBuffs > 0 then
 		local timeEnding, abilityId, buffTypeFoodDrink
 		for i = 1, numBuffs do
-			_, _, timeEnding, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
+			timeEnding, _, _, _, _, _, _, _, abilityId = select(3, GetUnitBuffInfo(unitTag, i))
 			buffTypeFoodDrink = GetBuffTypeInfos(abilityId)
 			if buffTypeFoodDrink ~= NONE then
 				return true, self:GetTimeLeftInSeconds(timeEnding), abilityId
@@ -428,7 +434,7 @@ end
 
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
-	local _, isDrink = GetBuffTypeInfos(abilityId)
+	local isDrink = select(2, GetBuffTypeInfos(abilityId))
 	return isDrink
 end
 
