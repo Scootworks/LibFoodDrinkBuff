@@ -1,5 +1,5 @@
 --Library constants are missing?
-assert(not LIB_FOOD_DRINK_BUFF, GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING))
+assert(not LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING), LFDB_LIB_IDENTIFIER))
 
 --Get global which was defined in constants
 local lib = LIB_FOOD_DRINK_BUFF
@@ -283,7 +283,7 @@ function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 end
 
 function lib:IsAbilityAFoodBuff(abilityId)
--- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
+-- Returns 1: nilable:bool isAbilityAFoodBuff(true) or false; or nil if not a food or drink buff
 	local _, isDrinkTrueOrFoodFalse = GetBuffTypeInfos(abilityId)
 	if isDrinkTrueOrFoodFalse == true then
 		return false
@@ -294,7 +294,7 @@ function lib:IsAbilityAFoodBuff(abilityId)
 end
 
 function lib:IsAbilityADrinkBuff(abilityId)
--- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
+-- Returns 1: nilable:bool isAbilityADrinkBuff(true) or false; or nil if not a food or drink buff
 	local _, isDrinkTrueOrFoodFalse = GetBuffTypeInfos(abilityId)
 	if isDrinkTrueOrFoodFalse == true then
 		return true
