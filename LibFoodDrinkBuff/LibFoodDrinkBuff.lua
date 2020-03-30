@@ -37,7 +37,7 @@ local function GetBuffTypeInfos(abilityId)
 	if foodBuffType then
 		return foodBuffType, false
 	end
-	return NONE, nil --NONE = 0
+	return LFDB_BUFF_TYPE_NONE, nil -- LFDB_BUFF_TYPE_NONE = 0
 end
 
 
