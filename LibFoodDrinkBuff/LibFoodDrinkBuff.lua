@@ -1,192 +1,17 @@
 -- Library was not loaded yet?
-assert(not LIB_FOOD_DRINK_BUFF.isLibInitialized, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED), LFDB_LIB_IDENTIFIER))
+assert(not LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED), LFDB_LIB_IDENTIFIER))
 
---Get global which was defined in constants
-local lib = LIB_FOOD_DRINK_BUFF
-
-----------------------------
--- LOCAL HELPER FUNCTIONS --
-----------------------------
---Get the clien'ts language
-local function GetClientLang()
-	local language = GetCVar("language.2")
-	return lib.LANGUAGES_SUPPORTED[language] and language or LFDB_LANGUAGE_ENGLISH
-end
-
---Check if a string contains a blacklisted pattern
-local function DoesStringContainsBlacklistPattern(text)
-	local patternFound
-	local blacklistStringPattern = lib.BLACKLIST_STRING_PATTERN[lib.clientLanguage]
-	for index, pattern in ipairs(blacklistStringPattern) do
-		patternFound = text:lower():find(pattern:lower())
-		if patternFound then
-			return true
-		end
-	end
-	return false
-end
-
---Get the ability's buffType (food or drink)
-local function GetBuffTypeInfos(abilityId)
--- Returns 2: number buffTypeFoodDrink, bool isDrink
-	local drinkBuffType = lib.DRINK_BUFF_ABILITIES[abilityId]
-	if drinkBuffType then
-		return drinkBuffType, true
-	end
-	local foodBuffType = lib.FOOD_BUFF_ABILITIES[abilityId]
-	if foodBuffType then
-		return foodBuffType, false
-	end
-	return LFDB_BUFF_TYPE_NONE, nil -- LFDB_BUFF_TYPE_NONE = 0
-end
-
-
----------------
--- COLLECTOR --
----------------
-local ARGUMENT_ALL = 1
-local ARGUMENT_NEW = 2
-
-local MAX_ABILITY_ID = 2000000
-local MAX_ABILITY_DURATION = 2000000
-
-ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] = 
-{
-	title =
-	{
-		text = SI_LIB_FOOD_DRINK_BUFF_DIALOG_TITLE,
-	},
-	mainText = 
-	{
-		text = function(dialog) return zo_strformat(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, dialog.data.countEntries) end
-	},
-	buttons =
-	{
-		[1] =
-		{
-			text = SI_DIALOG_YES,
-			callback = function() ReloadUI("ingame") end,
-		},
-		[2] =
-		{
-			text = SI_DIALOG_NO,
-		},
-	},
-}
-
-
-local collector = { }
-
-function collector:Initialize(async)
-	self.TaskScan = async:Create(LFDB_LIB_IDENTIFIER.. "_Collector")
-	self:InitializeSlashCommands()
-end
-
-function collector:InitializeSlashCommands()
-	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
-		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
-		if saveType then
-			lib.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
-
-			-- get/set savedVars
-			if not self.sv then
-				LibFoodDrinkBuff_Save = LibFoodDrinkBuff_Save or { }
-				self.sv = LibFoodDrinkBuff_Save
-				LibFoodDrinkBuff_Save = self.sv 
-			end
-			-- clear old savedVars
-			self.sv.foodDrinkBuffList = { }
-
-			-- start new scan
-			self.TaskScan:For(1, MAX_ABILITY_ID):Do(function(abilityId)
-				if DoesAbilityExist(abilityId) then
-					self:AddToFoodDrinkTable(abilityId, saveType)
-				end
-			end):Then(function()
-				-- update the savedVars timestamp
-				self.sv.lastUpdated = { }
-				self.sv.lastUpdated.timestamp = os.date()
-				self.sv.lastUpdated.saveType = saveType
-				self:NotificationAfterCreatingFoodDrinkTable()
-			end)
-
-		else
-			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
-		end
-	end
-end
-
-function collector:NotificationAfterCreatingFoodDrinkTable()
-	local countEntries = #self.sv.foodDrinkBuffList
-	if countEntries > 0 then
-		local data = { countEntries = countEntries }
-		ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", data)
-	else
-		lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
-	end
-end
-
-function collector:AddToFoodDrinkTable(abilityId, saveType)
-	if saveType == ARGUMENT_NEW and GetBuffTypeInfos(abilityId) ~= NONE then
-		return
-	end
-
-	-- We gonna check the abilityId parameter step by step to increase performance during the check.
-	if GetAbilityAngleDistance(abilityId) == 0 then
-		if GetAbilityRadius(abilityId) == 0 then
-			if GetAbilityDuration(abilityId) > MAX_ABILITY_DURATION then
-				local minRangeCM, maxRangeCM = GetAbilityRange(abilityId)
-				if minRangeCM == 0 and maxRangeCM == 0 then
-					local cost, mechanic = GetAbilityCost(abilityId)
-					if cost == 0 and mechanic == POWERTYPE_MAGICKA then
-						local channeled, castTime = GetAbilityCastInfo(abilityId)
-						if not channeled and castTime == 0 then
-							if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
-								if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
-									local abilityName = GetAbilityName(abilityId)
-									if not DoesStringContainsBlacklistPattern(abilityName) then
-										local ability = { }
-										ability.abilityId = abilityId
-										ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
-										ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
-										table.insert(self.sv.foodDrinkBuffList, ability)
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-	end
-end
-
-
----------------------
--- FOOD AND DRINKS --
----------------------
-function lib:Initialize()
-	self.addOnManager = GetAddOnManager()
-	self.clientLanguage = GetClientLang()
-	self.version = self:GetAddonVersionFromManifest()
-	self.eventList = { }
-
-	-- the collector is only active, if you have LibAsync
-	self.async = LibAsync
-	if self.async then
-		collector:Initialize(self.async)
-	end
-end
+local lib = { }
 
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
+local addOnManager = GetAddOnManager()
 function lib:GetAddonVersionFromManifest(addOnNameString)
 -- Returns 1: number nilable:addOnVersion
-	addOnNameString = addOnNameString or LFDB_LIB_IDENTIFIER
 	if addOnNameString then
-		local numAddOns = self.addOnManager:GetNumAddOns()
+		local numAddOns = addOnManager:GetNumAddOns()
 		for i = 1, numAddOns do
-			if self.addOnManager:GetAddOnInfo(i) == addOnNameString then
-				return self.addOnManager:GetAddOnVersion(i)
+			if addOnManager:GetAddOnInfo(i) == addOnNameString then
+				return addOnManager:GetAddOnVersion(i)
 			end
 		end
 	end
@@ -231,22 +56,22 @@ function lib:GetFoodBuffInfos(unitTag)
 		for i = 1, numBuffs do
 			-- Returns 13: string buffName, number timeStarted, number timeEnding, number buffSlot, number stackCount, string iconFilename, string buffType, number effectType, number abilityType, number statusEffectType, number abilityId, bool canClickOff, bool castByPlayer
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			buffTypeFoodDrink, isDrink = GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= NONE then
+			buffTypeFoodDrink, isDrink = lib:GetBuffTypeInfos(abilityId)
+			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
 				return buffTypeFoodDrink, isDrink, abilityId, ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ABILITY_NAME, buffName), timeStarted, timeEnding, iconTexture, self:GetTimeLeftInSeconds(timeEnding)
 			end
 		end
 	end
-	return NONE, nil, nil, nil, nil, nil, nil, 0
+	return LFDB_BUFF_TYPE_NONE, nil, nil, nil, nil, nil, nil, 0
 end
 
 function lib:GetFoodBuffAbilityData()
---returns 1: table foodBuffAbilityIds = LibFoodDrinkBuff_buffTypeConstant
+-- Returns 1: table foodBuffAbilityIds = LibFoodDrinkBuff_buffTypeConstant
 	return lib.FOOD_BUFF_ABILITIES
 end
 
 function lib:GetDrinkBuffAbilityData()
---returns 1: table drinkBuffAbilityIds = LibFoodDrinkBuff_buffTypeConstant
+-- Returns 1: table drinkBuffAbilityIds = LibFoodDrinkBuff_buffTypeConstant
 	return lib.DRINK_BUFF_ABILITIES
 end
 
@@ -257,8 +82,8 @@ function lib:IsFoodBuffActive(unitTag)
 		local abilityId, buffTypeFoodDrink
 		for i = 1, numBuffs do
 			abilityId = select(11, GetUnitBuffInfo(unitTag, i))
-			buffTypeFoodDrink = GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= NONE then
+			buffTypeFoodDrink = lib:GetBuffTypeInfos(abilityId)
+			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
 				return true
 			end
 		end
@@ -273,8 +98,8 @@ function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 		local timeEnding, abilityId, buffTypeFoodDrink
 		for i = 1, numBuffs do
 			timeEnding, _, _, _, _, _, _, _, abilityId = select(3, GetUnitBuffInfo(unitTag, i))
-			buffTypeFoodDrink = GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= NONE then
+			buffTypeFoodDrink = lib:GetBuffTypeInfos(abilityId)
+			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
 				return true, self:GetTimeLeftInSeconds(timeEnding), abilityId
 			end
 		end
@@ -284,7 +109,7 @@ end
 
 function lib:IsAbilityAFoodBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityAFoodBuff(true) or false; or nil if not a food or drink buff
-	local _, isDrinkTrueOrFoodFalse = GetBuffTypeInfos(abilityId)
+	local _, isDrinkTrueOrFoodFalse = lib:GetBuffTypeInfos(abilityId)
 	if isDrinkTrueOrFoodFalse == true then
 		return false
 	elseif isDrinkTrueOrFoodFalse == false then
@@ -295,7 +120,7 @@ end
 
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or false; or nil if not a food or drink buff
-	local _, isDrinkTrueOrFoodFalse = GetBuffTypeInfos(abilityId)
+	local _, isDrinkTrueOrFoodFalse = lib:GetBuffTypeInfos(abilityId)
 	if isDrinkTrueOrFoodFalse == true then
 		return true
 	elseif isDrinkTrueOrFoodFalse == false then
@@ -308,7 +133,7 @@ function lib:IsConsumableItem(bagId, slotIndex)
 -- Returns 1: bool isConsumableItem
 	local itemType = GetItemType(bagId, slotIndex)
 	if itemType == ITEMTYPE_DRINK or itemType == ITEMTYPE_FOOD then
-		return DoesStringContainsBlacklistPattern(GetItemName(bagId, slotIndex)) == false
+		return lib:DoesStringContainsBlacklistPattern(GetItemName(bagId, slotIndex)) == false
 	end
 	return false
 end
@@ -403,20 +228,37 @@ function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace)
 	return nil
 end
 
+----------------
+-- INITIALIZE --
+----------------
+function lib:Initialize()
+	LibFoodDrinkBuff_InitializeConstants(self)
+	LibFoodDrinkBuff_InitializeData(self)
+
+	self.version = self:GetAddonVersionFromManifest(LFDB_LIB_IDENTIFIER)
+	self.eventList = { }
+
+	-- the collector is only active, if you have LibAsync
+	self.async = LibAsync
+	if self.async then
+		LibFoodDrinkBuff_InitializeCollector(self)
+	end
+end
+
 local function OnAddOnLoaded(_, addOnName)
 	if addOnName == LFDB_LIB_IDENTIFIER then
 		EVENT_MANAGER:UnregisterForEvent(LFDB_LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
 		lib:Initialize()
+		CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_Initialized")
 	end
 end
 EVENT_MANAGER:RegisterForEvent(LFDB_LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
-
 
 -------------
 -- GLOBALS --
 -------------
 function DEBUG_ACTIVE_BUFFS(unitTag)
-	unitTag = unitTag or LFDB_PLAYER_TAG
+	unitTag = unitTag or "player"
 
 	local entries = {}
 	table.insert(entries, zo_strformat("Debug \"<<1>>\" Buffs:", unitTag))
@@ -434,4 +276,5 @@ function DEBUG_ACTIVE_BUFFS(unitTag)
 	lib.chat:Print(table.concat(entries, "\n"))
 end
 
-lib.isLibInitialized = true
+
+LIB_FOOD_DRINK_BUFF = lib

@@ -18,5 +18,6 @@ lang\$(language).lua
 
 LibFoodDrinkBuff_Constants.lua
 LibFoodDrinkBuff_Data.lua
+LibFoodDrinkBuff_Collector.lua
 
 LibFoodDrinkBuff.lua
