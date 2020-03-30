@@ -1,3 +1,6 @@
+ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED", "Library \'%s\' was already loaded.")
+ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING", "Error: Library \'%s\' constants are missing!")
+
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_EXCEL", "[<<1>>] = true, -- <<2>>")
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_ABILITY_NAME", "<<C:1>>")
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_DIALOG_TITLE", "Lib Food Drink Buff")

@@ -1,46 +1,22 @@
-local LIB_IDENTIFIER = "LibFoodDrinkBuff"
-assert(not LIB_FOOD_DRINK_BUFF, LIB_IDENTIFIER .. " is already loaded")
+--Library constants are missing?
+assert(not LIB_FOOD_DRINK_BUFF, GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING))
 
+--Get global which was defined in constants
+local lib = LIB_FOOD_DRINK_BUFF
 
-local lib = { }
-
-lib.chat = {}
-if LibChatMessage then
-	lib.chat = LibChatMessage(LIB_IDENTIFIER, "LibFDB")
-end
-if not lib.chat.Print then
-	lib.chat.Print = function(self, message) df("[%s] %s", LIB_IDENTIFIER, message) end
-end
-
----------------
--- LANGUAGES --
----------------
-local LANGUAGE_ENGLISH = "en"
-local LANGUAGE_GERMAN = "de"
-local LANGUAGE_FRENCH = "fr"
-
-local LANGUAGES_SUPPORTED =
-{
-	[LANGUAGE_ENGLISH] = true,
-	[LANGUAGE_GERMAN] = true,
-	[LANGUAGE_FRENCH] = true,
-}
-
-local BLACKLIST_STRING_PATTERN =
-{
-	[LANGUAGE_ENGLISH] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth", "Ambrosia" },
-	[LANGUAGE_GERMAN] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth", "Ambrosia" },
-	[LANGUAGE_FRENCH] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth", "Ambroisie" },
-}
-
+----------------------------
+-- LOCAL HELPER FUNCTIONS --
+----------------------------
+--Get the clien'ts language
 local function GetClientLang()
 	local language = GetCVar("language.2")
-	return LANGUAGES_SUPPORTED[language] and language or LANGUAGE_ENGLISH
+	return lib.LANGUAGES_SUPPORTED[language] and language or LFDB_LANGUAGE_ENGLISH
 end
 
+--Check if a string contains a blacklisted pattern
 local function DoesStringContainsBlacklistPattern(text)
 	local patternFound
-	local blacklistStringPattern = BLACKLIST_STRING_PATTERN[lib.clientLanguage]
+	local blacklistStringPattern = lib.BLACKLIST_STRING_PATTERN[lib.clientLanguage]
 	for index, pattern in ipairs(blacklistStringPattern) do
 		patternFound = text:lower():find(pattern:lower())
 		if patternFound then
@@ -50,160 +26,18 @@ local function DoesStringContainsBlacklistPattern(text)
 	return false
 end
 
-
-----------------
--- BUFF TYPES --
-----------------
-local NONE = 0
-local MAX_HEALTH = 1
-local MAX_MAGICKA = 2
-local MAX_STAMINA = 4
-local REGEN_HEALTH = 8
-local REGEN_MAGICKA = 16
-local REGEN_STAMINA = 32
-local SPECIAL_VAMPIRE = 64
-local FIND_FISHES = 128
-local WEREWOLF_TRANSFORMATION = 256
-local MAX_ALL = MAX_HEALTH + MAX_MAGICKA + MAX_STAMINA
-local MAX_ALL_REGEN_HEALTH = MAX_ALL + REGEN_HEALTH
-local MAX_HEALTH_MAGICKA = MAX_HEALTH + MAX_MAGICKA
-local MAX_HEALTH_MAGICKA_FISH = MAX_HEALTH + MAX_MAGICKA + FIND_FISHES
-local MAX_HEALTH_MAGICKA_REGEN_HEALTH_MAGICKA = MAX_HEALTH + REGEN_HEALTH + MAX_MAGICKA + REGEN_MAGICKA
-local MAX_HEALTH_MAGICKA_REGEN_MAGICKA = MAX_HEALTH + MAX_MAGICKA + REGEN_MAGICKA
-local MAX_HEALTH_MAGICKA_SPECIAL_VAMPIRE = MAX_HEALTH + MAX_MAGICKA + SPECIAL_VAMPIRE
-local MAX_HEALTH_REGEN_ALL = MAX_HEALTH + REGEN_HEALTH + REGEN_MAGICKA + REGEN_STAMINA
-local MAX_HEALTH_REGEN_HEALTH = MAX_HEALTH + REGEN_HEALTH
-local MAX_HEALTH_REGEN_MAGICKA = MAX_HEALTH + REGEN_MAGICKA
-local MAX_HEALTH_REGEN_STAMINA = MAX_HEALTH + REGEN_STAMINA
-local MAX_HEALTH_REGEN_MAGICKA_STAMINA = MAX_HEALTH + REGEN_MAGICKA + REGEN_STAMINA
-local MAX_HEALTH_STAMINA = MAX_HEALTH + MAX_STAMINA
-local MAX_HEALTH_STAMINA_REGEN_HEALTH_STAMINA = MAX_HEALTH + REGEN_HEALTH + MAX_STAMINA + REGEN_STAMINA
-local MAX_HEALTH_STAMINA_WEREWOLF = MAX_HEALTH_STAMINA + WEREWOLF_TRANSFORMATION
-local MAX_MAGICKA_REGEN_HEALTH = MAX_MAGICKA + REGEN_HEALTH
-local MAX_MAGICKA_REGEN_MAGICKA = MAX_MAGICKA + REGEN_MAGICKA
-local MAX_MAGICKA_REGEN_STAMINA = MAX_MAGICKA + REGEN_STAMINA
-local MAX_MAGICKA_STAMINA = MAX_MAGICKA + MAX_STAMINA
-local MAX_STAMINA_HEALTH_REGEN_STAMINA = MAX_HEALTH + MAX_STAMINA + REGEN_STAMINA
-local MAX_STAMINA_REGEN_HEALTH = MAX_STAMINA + REGEN_HEALTH
-local MAX_STAMINA_REGEN_MAGICKA = MAX_STAMINA + REGEN_MAGICKA
-local MAX_STAMINA_REGEN_STAMINA = MAX_STAMINA + REGEN_STAMINA
-local REGEN_ALL = REGEN_HEALTH + REGEN_MAGICKA + REGEN_STAMINA
-local REGEN_HEALTH_MAGICKA = REGEN_HEALTH + REGEN_MAGICKA
-local REGEN_HEALTH_STAMINA = REGEN_HEALTH + REGEN_STAMINA
-local REGEN_MAGICKA_STAMINA = REGEN_MAGICKA + REGEN_STAMINA
-local REGEN_MAGICKA_STAMINA_FISH = REGEN_MAGICKA + REGEN_STAMINA + FIND_FISHES
-
-
---------------------
--- DRINKS'n'FOODS --
---------------------
-local DRINK_BUFF_ABILITIES = {
-	[61322] = REGEN_HEALTH, -- Health Recovery
-	[61325] = REGEN_MAGICKA, -- Magicka Recovery
-	[61328] = REGEN_STAMINA, -- Health & Magicka Recovery
-	[61335] = REGEN_HEALTH_MAGICKA, -- Health & Magicka Recovery
-	[61340] = REGEN_HEALTH_STAMINA, -- Health & Stamina Recovery
-	[61345] = REGEN_MAGICKA_STAMINA, -- Magicka & Stamina Recovery
-	[61350] = REGEN_ALL, -- All Primary Stat Recovery
-	[66125] = MAX_HEALTH, -- Increase Max Health
-	[66132] = REGEN_HEALTH, -- Health Recovery (Alcoholic Drinks)
-	[66137] = REGEN_MAGICKA, -- Magicka Recovery (Tea)
-	[66141] = REGEN_STAMINA, -- Stamina Recovery (Tonics)
-	[66586] = REGEN_HEALTH, -- Health Recovery
-	[66590] = REGEN_MAGICKA, -- Magicka Recovery
-	[66594] = REGEN_STAMINA, -- Stamina Recovery
-	[68416] = REGEN_ALL, -- All Primary Stat Recovery (Crown Refreshing Drink)
-	[72816] = REGEN_HEALTH_MAGICKA, -- Red Frothgar
-	[72965] = REGEN_HEALTH_STAMINA, -- Health and Stamina Recovery (Cyrodilic Field Brew)
-	[72968] = REGEN_HEALTH_MAGICKA, -- Health and Magicka Recovery (Cyrodilic Field Tea)
-	[72971] = REGEN_MAGICKA_STAMINA, -- Magicka and Stamina Recovery (Cyrodilic Field Tonic)
-	[84700] = REGEN_HEALTH_MAGICKA, -- 2h Witches event: Eyeballs
-	[84704] = REGEN_ALL, -- 2h Witches event: Witchmother's Party Punch
-	[84720] = MAX_MAGICKA_REGEN_MAGICKA, -- 2h Witches event: Eye Scream
-	[84731] = MAX_HEALTH_MAGICKA_REGEN_MAGICKA, -- 2h Witches event: Witchmother's Potent Brew
-	[84732] = REGEN_HEALTH, -- Increase Health Regen
-	[84733] = REGEN_HEALTH, -- Increase Health Regen
-	[84735] = MAX_HEALTH_MAGICKA_SPECIAL_VAMPIRE, -- 2h Witches event: Double Bloody Mara
-	[85497] = REGEN_ALL, -- All Primary Stat Recovery
-	[86559] = REGEN_MAGICKA_STAMINA_FISH, -- Hissmir Fish Eye Rye
-	[86560] = REGEN_STAMINA, -- Stamina Recovery
-	[86673] = MAX_STAMINA_REGEN_STAMINA, -- Lava Foot Soup & Saltrice
-	[86674] = REGEN_STAMINA, -- Stamina Recovery
-	[86677] = MAX_STAMINA_REGEN_HEALTH, -- Warning Fire (Bergama Warning Fire)
-	[86678] = REGEN_HEALTH, -- Health Recovery
-	[86746] = REGEN_HEALTH_MAGICKA, -- Betnikh Spiked Ale (Betnikh Twice-Spiked Ale)
-	[86747] = REGEN_HEALTH, -- Health Recovery
-	[86791] = REGEN_STAMINA, -- Increase Stamina Recovery (Ice Bear Glow-Wine)
-	[89957] = MAX_STAMINA_HEALTH_REGEN_STAMINA, -- Dubious Camoran Throne
-	[92433] = REGEN_HEALTH_MAGICKA, -- Health & Magicka Recovery
-	[92476] = REGEN_HEALTH_STAMINA, -- Health & Stamina Recovery
-	[100488] = MAX_ALL, -- Spring-Loaded Infusion
-	[127531] = MAX_HEALTH_MAGICKA, -- Disastrously Bloody Mara
-	[127572] = MAX_HEALTH_STAMINA_WEREWOLF, -- Pack Leader's Bone Broth
-}
-
-local FOOD_BUFF_ABILITIES = {
-	[17407] = MAX_HEALTH, -- Increase Max Health
-	[17577] = MAX_MAGICKA_STAMINA, -- Increase Max Magicka & Stamina
-	[17581] = MAX_ALL, -- Increase All Primary Stats
-	[17608] = REGEN_MAGICKA_STAMINA, -- Magicka & Stamina Recovery
-	[17614] = REGEN_ALL, -- All Primary Stat Recovery
-	[61218] = MAX_ALL, -- Increase All Primary Stats
-	[61255] = MAX_HEALTH_STAMINA, -- Increase Max Health & Stamina
-	[61257] = MAX_HEALTH_MAGICKA, -- Increase Max Health & Magicka
-	[61259] = MAX_HEALTH, -- Increase Max Health
-	[61260] = MAX_MAGICKA, -- Increase Max Magicka
-	[61261] = MAX_STAMINA, -- Increase Max Stamina
-	[61294] = MAX_MAGICKA_STAMINA, -- Increase Max Magicka & Stamina
-	[66128] = MAX_MAGICKA, -- Increase Max Magicka
-	[66130] = MAX_STAMINA, -- Increase Max Stamina
-	[66551] = MAX_HEALTH, -- Garlic and Pepper Venison Steak
-	[66568] = MAX_MAGICKA, -- Increase Max Magicka
-	[66576] = MAX_STAMINA, -- Increase Max Stamina
-	[68411] = MAX_ALL, -- Crown store
-	[72819] = MAX_HEALTH_REGEN_STAMINA, -- Tripe Trifle Pocket
-	[72822] = MAX_HEALTH_REGEN_HEALTH, -- Blood Price Pie
-	[72824] = MAX_HEALTH_REGEN_ALL, -- Smoked Bear Haunch
-	[72956] = MAX_HEALTH_STAMINA, -- Max Health and Stamina (Cyrodilic Field Tack)
-	[72959] = MAX_HEALTH_MAGICKA, -- Max Health and Magicka (Cyrodilic Field Treat)
-	[72961] = MAX_MAGICKA_STAMINA, -- Max Stamina and Magicka (Cyrodilic Field Bar)
-	[84678] = MAX_MAGICKA, -- Increase Max Magicka
-	[84681] = MAX_MAGICKA_STAMINA, -- Pumpkin Snack Skewer
-	[84709] = MAX_MAGICKA_REGEN_STAMINA, -- Crunchy Spider Skewer
-	[84725] = MAX_MAGICKA_REGEN_HEALTH, -- The Brains!
-	[84736] = MAX_HEALTH, -- Increase Max Health
-	[85484] = MAX_ALL, -- Increase All Primary Stats
-	[86749] = MAX_MAGICKA_STAMINA, -- Mud Ball
-	[86787] = MAX_STAMINA, -- Rajhin's Sugar Claws
-	[86789] = MAX_HEALTH, -- Alcaire Festival Sword-Pie
-	[89955] = MAX_STAMINA_REGEN_MAGICKA, -- Candied Jester's Coins
-	[89971] = MAX_HEALTH_REGEN_MAGICKA_STAMINA, -- Jewels of Misrule
-	[92435] = MAX_HEALTH_MAGICKA, -- Increase Health & Magicka
-	[92437] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
-	[92474] = MAX_HEALTH_STAMINA, -- Increase Health & Stamina
-	[92477] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
-	[100498] = MAX_HEALTH_MAGICKA_REGEN_HEALTH_MAGICKA, -- Clockwork Citrus Filet
-	[100502] = REGEN_HEALTH_MAGICKA, -- Deregulated Mushroom Stew
-	[107748] = MAX_HEALTH_MAGICKA_FISH, -- Lure Allure
-	[107789] = MAX_HEALTH_STAMINA_REGEN_HEALTH_STAMINA, -- Artaeum Takeaway Broth
-	[127537] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
-	[127578] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
-	[127596] = MAX_ALL_REGEN_HEALTH, -- Bewitched Sugar Skulls
-	[127619] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
-	[127736] = MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
-}
-
+--Get the ability's buffType (food or drink)
 local function GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
-	local drinkBuffType = DRINK_BUFF_ABILITIES[abilityId]
+	local drinkBuffType = lib.DRINK_BUFF_ABILITIES[abilityId]
 	if drinkBuffType then
 		return drinkBuffType, true
 	end
-	local foodBuffType = FOOD_BUFF_ABILITIES[abilityId]
+	local foodBuffType = lib.FOOD_BUFF_ABILITIES[abilityId]
 	if foodBuffType then
 		return foodBuffType, false
 	end
-	return NONE, nil
+	return NONE, nil --NONE = 0
 end
 
 
@@ -244,7 +78,7 @@ ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 local collector = { }
 
 function collector:Initialize(async)
-	self.TaskScan = async:Create(LIB_IDENTIFIER.. "_Collector")
+	self.TaskScan = async:Create(LFDB_LIB_IDENTIFIER.. "_Collector")
 	self:InitializeSlashCommands()
 end
 
@@ -347,7 +181,7 @@ end
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
 function lib:GetAddonVersionFromManifest(addOnNameString)
 -- Returns 1: number nilable:addOnVersion
-	addOnNameString = addOnNameString or LIB_IDENTIFIER
+	addOnNameString = addOnNameString or LFDB_LIB_IDENTIFIER
 	if addOnNameString then
 		local numAddOns = self.addOnManager:GetNumAddOns()
 		for i = 1, numAddOns do
@@ -363,6 +197,12 @@ end
 function lib:GetLanguage()
 -- Returns 1: string language
 	return self.clientLanguage
+end
+
+-- Get the allowed languages of this lib
+function lib:GetSupportedLanguages()
+-- Returns 1: table supportedLanguages[languageString] = boolean true/false
+	return self.LANGUAGES_SUPPORTED
 end
 
 -- Get the addOnVersion of this lib
@@ -400,6 +240,16 @@ function lib:GetFoodBuffInfos(unitTag)
 	return NONE, nil, nil, nil, nil, nil, nil, 0
 end
 
+function lib:GetFoodBuffAbilityData()
+--returns 1: table foodBuffAbilityIds = LibFoodDrinkBuff_buffTypeConstant
+	return lib.FOOD_BUFF_ABILITIES
+end
+
+function lib:GetDrinkBuffAbilityData()
+--returns 1: table drinkBuffAbilityIds = LibFoodDrinkBuff_buffTypeConstant
+	return lib.DRINK_BUFF_ABILITIES
+end
+
 function lib:IsFoodBuffActive(unitTag)
 -- Returns 1: bool isBuffActive
 	local numBuffs = GetNumBuffs(unitTag)
@@ -432,10 +282,26 @@ function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 	return false, 0, nil
 end
 
+function lib:IsAbilityAFoodBuff(abilityId)
+-- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
+	local _, isDrinkTrueOrFoodFalse = GetBuffTypeInfos(abilityId)
+	if isDrinkTrueOrFoodFalse == true then
+		return false
+	elseif isDrinkTrueOrFoodFalse == false then
+		return true
+	end
+	return nil
+end
+
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or isAbilityAFoodBuff(false), or nil if not a food or drink buff
-	local isDrink = select(2, GetBuffTypeInfos(abilityId))
-	return isDrink
+	local _, isDrinkTrueOrFoodFalse = GetBuffTypeInfos(abilityId)
+	if isDrinkTrueOrFoodFalse == true then
+		return true
+	elseif isDrinkTrueOrFoodFalse == false then
+		return false
+	end
+	return nil
 end
 
 function lib:IsConsumableItem(bagId, slotIndex)
@@ -492,14 +358,14 @@ function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace, c
 -- Returns 1: nilable:succesfulRegister
 	local typeNamespace = type(addonEventNamespace) == "string"
 	if typeNamespace then
-		assert(addonEventNamespace ~= "", LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is an empty string.")
-		assert(type(callbackFunc) == "function", LIB_IDENTIFIER .. ": Parameter 'callbackFunc' is not a function.")
+		assert(addonEventNamespace ~= "", LFDB_LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is an empty string.")
+		assert(type(callbackFunc) == "function", LFDB_LIB_IDENTIFIER .. ": Parameter 'callbackFunc' is not a function.")
 
 		local index = GetIndexOfNamespaceInEventsList(self.eventList, addonEventNameSpace)
 		if not index then
 			EVENT_MANAGER:RegisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, function(_, ...)
 				local abilityId = select(15, ...)
-				if FOOD_BUFF_ABILITIES[abilityId] or DRINK_BUFF_ABILITIES[abilityId] then
+				if lib.FOOD_BUFF_ABILITIES[abilityId] or lib.DRINK_BUFF_ABILITIES[abilityId] then
 					callbackFunc(...)
 					-- Returns 16: changeType, effectSlot, effectName, unitTag, beginTime, endTime, stackCount, iconName, buffType, effectType, abilityType, statusEffectType, unitName, unitId, abilityId, sourceType
 				end
@@ -521,7 +387,7 @@ function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace, c
 			return true
 		end
 	end
-	assert(typeNamespace, LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is not a string.")
+	assert(typeNamespace, LFDB_LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is not a string.")
 	return nil
 end
 
@@ -538,19 +404,19 @@ function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace)
 end
 
 local function OnAddOnLoaded(_, addOnName)
-	if addOnName == LIB_IDENTIFIER then
-		EVENT_MANAGER:UnregisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
+	if addOnName == LFDB_LIB_IDENTIFIER then
+		EVENT_MANAGER:UnregisterForEvent(LFDB_LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
 		lib:Initialize()
 	end
 end
-EVENT_MANAGER:RegisterForEvent(LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
+EVENT_MANAGER:RegisterForEvent(LFDB_LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
 
 
 -------------
 -- GLOBALS --
 -------------
 function DEBUG_ACTIVE_BUFFS(unitTag)
-	unitTag = unitTag or "player"
+	unitTag = unitTag or LFDB_PLAYER_TAG
 
 	local entries = {}
 	table.insert(entries, zo_strformat("Debug \"<<1>>\" Buffs:", unitTag))
@@ -567,5 +433,3 @@ function DEBUG_ACTIVE_BUFFS(unitTag)
 
 	lib.chat:Print(table.concat(entries, "\n"))
 end
-
-LIB_FOOD_DRINK_BUFF = lib

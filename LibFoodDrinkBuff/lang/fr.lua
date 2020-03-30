@@ -1,3 +1,6 @@
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED, "La bibliothèque \'%s\' a déjà été chargée.", 0)
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING, "Erreur: Les constantes de la bibliothèque \'%s\' sont manquantes!", 0)
+
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_RELOAD, "L'interface utilisateur sera rechargée dans |cFF00005 secondes|r!", 0)
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START, "La recherche de nourriture / boisson a commencée. Cela peut prendre quelques secondes...", 0)
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, "Le recherche est terminée. Aucune nourriture ou boisson ont été exporté.", 0)
