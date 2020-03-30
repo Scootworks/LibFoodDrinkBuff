@@ -1,6 +1,3 @@
---Library constants are missing?
-assert(not LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING), LFDB_LIB_IDENTIFIER))
-
 --Get global which was defined in constants
 local lib = LIB_FOOD_DRINK_BUFF
 
