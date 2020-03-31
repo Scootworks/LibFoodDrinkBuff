@@ -232,8 +232,8 @@ end
 -- INITIALIZE --
 ----------------
 function lib:Initialize()
-	LibFoodDrinkBuff_InitializeConstants(self)
-	LibFoodDrinkBuff_InitializeData(self)
+	CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_InitializeConstants", self)
+	CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_InitializeData", self)
 
 	self.version = self:GetAddonVersionFromManifest(LFDB_LIB_IDENTIFIER)
 	self.eventList = { }
@@ -241,7 +241,7 @@ function lib:Initialize()
 	-- the collector is only active, if you have LibAsync
 	self.async = LibAsync
 	if self.async then
-		LibFoodDrinkBuff_InitializeCollector(self)
+		CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_InitializeCollector", self)
 	end
 end
 

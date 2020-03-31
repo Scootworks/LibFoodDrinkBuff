@@ -1,6 +1,8 @@
 local foodDrinkBuffAbilities
 
-function LibFoodDrinkBuff_InitializeData(lib)
+CALLBACK_MANAGER:RegisterCallback("LibFoodDrinkBuff_InitializeData", function(lib)
+	CALLBACK_MANAGER:UnregisterCallback("LibFoodDrinkBuff_InitializeData")
+
 	foodDrinkBuffAbilities = lib
 
 	--The drink buff abilityIds and their LibFoodDrinkBuff_buffTypeConstant
@@ -100,6 +102,4 @@ function LibFoodDrinkBuff_InitializeData(lib)
 		[127619] = LFDB_BUFF_TYPE_MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
 		[127736] = LFDB_BUFF_TYPE_MAX_MAGICKA, -- Increase Health (but descriptions says max magicka)
 	}
-
-	LibFoodDrinkBuff_InitializeData = nil
-end
+end)

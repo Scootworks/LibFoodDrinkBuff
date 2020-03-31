@@ -1,6 +1,8 @@
 local collector
 
-function LibFoodDrinkBuff_InitializeCollector(lib)
+CALLBACK_MANAGER:RegisterCallback("LibFoodDrinkBuff_InitializeCollector", function(lib)
+	CALLBACK_MANAGER:UnregisterCallback("LibFoodDrinkBuff_InitializeCollector")
+
 	collector = lib
 
 	ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] = 
@@ -110,6 +112,4 @@ function LibFoodDrinkBuff_InitializeCollector(lib)
 			end
 		end
 	end
-
-	LibFoodDrinkBuff_InitializeCollector = nil
-end
+end)

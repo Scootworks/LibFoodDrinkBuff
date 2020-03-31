@@ -3,7 +3,9 @@ LFDB_LIB_IDENTIFIER_SHORT = "LibFDB"
 
 local constants
 
-function LibFoodDrinkBuff_InitializeConstants(lib)
+CALLBACK_MANAGER:RegisterCallback("LibFoodDrinkBuff_InitializeConstants", function(lib)
+	CALLBACK_MANAGER:UnregisterCallback("LibFoodDrinkBuff_InitializeConstants")
+
 	constants = lib
 
 	-----------------
@@ -109,6 +111,4 @@ function LibFoodDrinkBuff_InitializeConstants(lib)
 		end
 		return LFDB_BUFF_TYPE_NONE, nil -- LFDB_BUFF_TYPE_NONE = 0
 	end
-
-	LibFoodDrinkBuff_InitializeConstants = nil
-end
+end)
