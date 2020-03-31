@@ -158,7 +158,9 @@ if LibChatMessage then
 	lib.chat = LibChatMessage(LFDB_LIB_IDENTIFIER, LFDB_LIB_IDENTIFIER_SHORT)
 end
 if not lib.chat.Print then
-	lib.chat.Print = function(self, message) df("[%s] %s", LFDB_LIB_IDENTIFIER, message) end
+	lib.chat.Print = function(self, message)
+		CHAT_ROUTER:AddDebugMessage(string.format("[%s] %s", LFDB_LIB_IDENTIFIER, message))
+	end
 end
 
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
@@ -207,9 +209,9 @@ end
 ------------
 -- EVENTS --
 ------------
-local function GetIndexOfNamespaceInEventsList(table, element)
-	for index, value in ipairs(table) do
-		if value.addonEventNamespace == element then
+local function GetIndexOfNamespaceInEventsList(table, addOnEventNamespace)
+	for index, eventData in ipairs(table) do
+		if eventData.addOnEventNamespace == addOnEventNamespace then
 			return index
 		end
 	end
@@ -221,16 +223,16 @@ end
 -- REGISTER_FILTER_UNIT_TAG, REGISTER_FILTER_UNIT_TAG_PREFIX or more https://wiki.esoui.com/AddFilterForEvent ,
 -- but DO NOT USE the filterType REGISTER_FILTER_ABILITY_ID, because this is already handled by the function (RegisterAbilityIdsFilterOnEventEffectChanged) itself!
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
-function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace, callbackFunc, ...)
+function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace, callbackFunc, ...)
 -- Returns 1: nilable:succesfulRegister
-	local typeNamespace = type(addonEventNamespace) == "string"
+	local typeNamespace = type(addOnEventNamespace) == "string"
 	if typeNamespace then
-		assert(addonEventNamespace ~= "", LFDB_LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is an empty string.")
+		assert(addOnEventNamespace ~= "", LFDB_LIB_IDENTIFIER .. ": Parameter 'addOnEventNamespace' is an empty string.")
 		assert(type(callbackFunc) == "function", LFDB_LIB_IDENTIFIER .. ": Parameter 'callbackFunc' is not a function.")
 
-		local index = GetIndexOfNamespaceInEventsList(self.eventList, addonEventNameSpace)
+		local index = GetIndexOfNamespaceInEventsList(self.eventList, addOnEventNamespace)
 		if not index then
-			EVENT_MANAGER:RegisterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, function(_, ...)
+			EVENT_MANAGER:RegisterForEvent(addOnEventNamespace, EVENT_EFFECT_CHANGED, function(_, ...)
 				local abilityId = select(15, ...)
 				if lib.FOOD_BUFF_ABILITIES[abilityId] or lib.DRINK_BUFF_ABILITIES[abilityId] then
 					callbackFunc(...)
@@ -246,24 +248,24 @@ function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace, c
 				for i = 1, select("#", filterParams), 2 do
 					local filterType = select(i, filterParams)
 					local filterParameter = select(i + 1, filterParams)
-					EVENT_MANAGER:AddFilterForEvent(addonEventNameSpace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
+					EVENT_MANAGER:AddFilterForEvent(addOnEventNamespace, EVENT_EFFECT_CHANGED, filterType, filterParameter)
 				end
 			end
 
-			table.insert(self.eventList, { addonEventNamespace = addonEventNamespace, callbackFunc = callbackFunc, filterParams = filterParams })
+			table.insert(self.eventList, { addOnEventNamespace = addOnEventNamespace, callbackFunc = callbackFunc, filterParams = filterParams })
 			return true
 		end
 	end
-	assert(typeNamespace, LFDB_LIB_IDENTIFIER .. ": Parameter 'addonEventNameSpace' is not a string.")
+	assert(typeNamespace, LFDB_LIB_IDENTIFIER .. ": Parameter 'addOnEventNamespace' is not a string.")
 	return nil
 end
 
 -- Unregister the register function above
-function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace)
+function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace)
 -- Returns 1: nilable:succesfulUnregister
-	local index = GetIndexOfNamespaceInEventsList(self.eventList, addonEventNamespace)
+	local index = GetIndexOfNamespaceInEventsList(self.eventList, addOnEventNamespace)
 	if index then
-		EVENT_MANAGER:UnregisterForEvent(addonEventNamespace, EVENT_EFFECT_CHANGED)
+		EVENT_MANAGER:UnregisterForEvent(addOnEventNamespace, EVENT_EFFECT_CHANGED)
 		table.remove(self.eventList, index)
 		return true
 	end
