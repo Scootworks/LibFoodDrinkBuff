@@ -1,5 +1,4 @@
-local lib = LIB_FOOD_DRINK_BUFF or { }
-LIB_FOOD_DRINK_BUFF = lib
+local lib = LIB_FOOD_DRINK_BUFF
 
 --The drink buff abilityIds and their LibFoodDrinkBuff_buffTypeConstant
 lib.DRINK_BUFF_ABILITIES = {

@@ -1,5 +1,4 @@
-local lib = LIB_FOOD_DRINK_BUFF or { }
-LIB_FOOD_DRINK_BUFF = lib
+local lib = LIB_FOOD_DRINK_BUFF
 
 
 --------------------
