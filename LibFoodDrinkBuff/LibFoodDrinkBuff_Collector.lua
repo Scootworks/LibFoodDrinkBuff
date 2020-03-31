@@ -1,10 +1,7 @@
-local collector
+local lib = LIB_FOOD_DRINK_BUFF or { }
+LIB_FOOD_DRINK_BUFF = lib
 
-CALLBACK_MANAGER:RegisterCallback("LibFoodDrinkBuff_InitializeCollector", function(lib)
-	CALLBACK_MANAGER:UnregisterCallback("LibFoodDrinkBuff_InitializeCollector")
-
-	collector = lib
-
+function lib:InitializeCollector()
 	ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] = 
 	{
 		title =
@@ -35,51 +32,52 @@ CALLBACK_MANAGER:RegisterCallback("LibFoodDrinkBuff_InitializeCollector", functi
 	local MAX_ABILITY_ID = 2000000
 	local MAX_ABILITY_DURATION = 2000000
 
-	local startScanAbilities = collector.async:Create(LFDB_LIB_IDENTIFIER .. "_Collector")
+	-- Add a slash command, to start collecting food/drink buffs
+	local startScanAbilities = lib.async:Create(LFDB_LIB_IDENTIFIER .. "_Collector")
 	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
 		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
 		if saveType then
-			collector.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
+			lib.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
 
 			-- get/set savedVars
-			if not collector.sv then
+			if not lib.sv then
 				LibFoodDrinkBuff_Save = LibFoodDrinkBuff_Save or { }
-				collector.sv = LibFoodDrinkBuff_Save
-				LibFoodDrinkBuff_Save = collector.sv 
+				lib.sv = LibFoodDrinkBuff_Save
+				LibFoodDrinkBuff_Save = lib.sv 
 			end
 			-- clear old savedVars
-			collector.sv.foodDrinkBuffList = { }
+			lib.sv.foodDrinkBuffList = { }
 
 			-- start new scan
 			startScanAbilities:For(1, MAX_ABILITY_ID):Do(function(abilityId)
 				if DoesAbilityExist(abilityId) then
-					collector:AddToFoodDrinkTable(abilityId, saveType)
+					lib:AddToFoodDrinkTable(abilityId, saveType)
 				end
 			end):Then(function()
 				-- update the savedVars timestamp
-				collector.sv.lastUpdated = { }
-				collector.sv.lastUpdated.timestamp = os.date()
-				collector.sv.lastUpdated.saveType = saveType
-				collector:NotificationAfterCreatingFoodDrinkTable()
+				lib.sv.lastUpdated = { }
+				lib.sv.lastUpdated.timestamp = os.date()
+				lib.sv.lastUpdated.saveType = saveType
+				lib:NotificationAfterCreatingFoodDrinkTable()
 			end)
 
 		else
-			collector.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
+			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
 		end
 	end
 
-	function collector:NotificationAfterCreatingFoodDrinkTable()
-		local countEntries = #collector.sv.foodDrinkBuffList
+	function lib:NotificationAfterCreatingFoodDrinkTable()
+		local countEntries = #lib.sv.foodDrinkBuffList
 		if countEntries > 0 then
 			local data = { countEntries = countEntries }
 			ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", data)
 		else
-			collector.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
+			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
 		end
 	end
 
-	function collector:AddToFoodDrinkTable(abilityId, saveType)
-		if saveType == ARGUMENT_NEW and collector:GetBuffTypeInfos(abilityId) ~= NONE then
+	function lib:AddToFoodDrinkTable(abilityId, saveType)
+		if saveType == ARGUMENT_NEW and lib:GetBuffTypeInfos(abilityId) ~= NONE then
 			return
 		end
 
@@ -96,12 +94,12 @@ CALLBACK_MANAGER:RegisterCallback("LibFoodDrinkBuff_InitializeCollector", functi
 								if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
 									if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
 										local abilityName = GetAbilityName(abilityId)
-										if not collector:DoesStringContainsBlacklistPattern(abilityName) then
+										if not lib:DoesStringContainsBlacklistPattern(abilityName) then
 											local ability = { }
 											ability.abilityId = abilityId
 											ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
 											ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
-											table.insert(collector.sv.foodDrinkBuffList, ability)
+											table.insert(lib.sv.foodDrinkBuffList, ability)
 										end
 									end
 								end
@@ -112,4 +110,4 @@ CALLBACK_MANAGER:RegisterCallback("LibFoodDrinkBuff_InitializeCollector", functi
 			end
 		end
 	end
-end)
+end

@@ -1,23 +1,10 @@
--- Library was not loaded yet?
-assert(not LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED), LFDB_LIB_IDENTIFIER))
+local lib = LIB_FOOD_DRINK_BUFF or { }
+LIB_FOOD_DRINK_BUFF = lib
 
-local lib = { }
 
--- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
-local addOnManager = GetAddOnManager()
-function lib:GetAddonVersionFromManifest(addOnNameString)
--- Returns 1: number nilable:addOnVersion
-	if addOnNameString then
-		local numAddOns = addOnManager:GetNumAddOns()
-		for i = 1, numAddOns do
-			if addOnManager:GetAddOnInfo(i) == addOnNameString then
-				return addOnManager:GetAddOnVersion(i)
-			end
-		end
-	end
-	return nil
-end
-
+--------------------
+-- MAIN FUNCTIONS --
+--------------------
 -- Get the clientLanguage of this lib
 function lib:GetLanguage()
 -- Returns 1: string language
@@ -162,6 +149,61 @@ function lib:GetConsumablesItemListFromInventory()
 end
 
 
+--------------------------------
+-- HELPER / UTILITY FUNCTIONS --
+--------------------------------
+-- Debug
+lib.chat = { }
+if LibChatMessage then
+	lib.chat = LibChatMessage(LFDB_LIB_IDENTIFIER, LFDB_LIB_IDENTIFIER_SHORT)
+end
+if not lib.chat.Print then
+	lib.chat.Print = function(self, message) df("[%s] %s", LFDB_LIB_IDENTIFIER, message) end
+end
+
+-- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
+local addOnManager = GetAddOnManager()
+function lib:GetAddonVersionFromManifest(addOnNameString)
+-- Returns 1: number nilable:addOnVersion
+	if addOnNameString then
+		local numAddOns = addOnManager:GetNumAddOns()
+		for i = 1, numAddOns do
+			if addOnManager:GetAddOnInfo(i) == addOnNameString then
+				return addOnManager:GetAddOnVersion(i)
+			end
+		end
+	end
+	return nil
+end
+
+-- Check if a string contains a blacklisted pattern
+function lib:DoesStringContainsBlacklistPattern(text)
+	local patternFound
+	local blacklistStringPattern = lib.BLACKLIST_STRING_PATTERN[lib.clientLanguage]
+	for index, pattern in ipairs(blacklistStringPattern) do
+		patternFound = text:lower():find(pattern:lower())
+		if patternFound then
+			return true
+		end
+	end
+	return false
+end
+
+-- Get the ability's buffType (food or drink)
+function lib:GetBuffTypeInfos(abilityId)
+-- Returns 2: number buffTypeFoodDrink, bool isDrink
+	local drinkBuffType = lib.DRINK_BUFF_ABILITIES[abilityId]
+	if drinkBuffType then
+		return drinkBuffType, true
+	end
+	local foodBuffType = lib.FOOD_BUFF_ABILITIES[abilityId]
+	if foodBuffType then
+		return foodBuffType, false
+	end
+	return LFDB_BUFF_TYPE_NONE, nil -- LFDB_BUFF_TYPE_NONE = 0
+end
+
+
 ------------
 -- EVENTS --
 ------------
@@ -228,20 +270,18 @@ function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addonEventNamespace)
 	return nil
 end
 
+
 ----------------
 -- INITIALIZE --
 ----------------
 function lib:Initialize()
-	CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_InitializeConstants", self)
-	CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_InitializeData", self)
-
 	self.version = self:GetAddonVersionFromManifest(LFDB_LIB_IDENTIFIER)
 	self.eventList = { }
 
 	-- the collector is only active, if you have LibAsync
 	self.async = LibAsync
 	if self.async then
-		CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_InitializeCollector", self)
+		lib:InitializeCollector()
 	end
 end
 
@@ -249,10 +289,10 @@ local function OnAddOnLoaded(_, addOnName)
 	if addOnName == LFDB_LIB_IDENTIFIER then
 		EVENT_MANAGER:UnregisterForEvent(LFDB_LIB_IDENTIFIER, EVENT_ADD_ON_LOADED)
 		lib:Initialize()
-		CALLBACK_MANAGER:FireCallbacks("LibFoodDrinkBuff_Initialized")
 	end
 end
 EVENT_MANAGER:RegisterForEvent(LFDB_LIB_IDENTIFIER, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
+
 
 -------------
 -- GLOBALS --
@@ -275,6 +315,3 @@ function DEBUG_ACTIVE_BUFFS(unitTag)
 
 	lib.chat:Print(table.concat(entries, "\n"))
 end
-
-
-LIB_FOOD_DRINK_BUFF = lib
