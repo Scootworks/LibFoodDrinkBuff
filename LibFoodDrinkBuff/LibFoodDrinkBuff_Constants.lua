@@ -1,20 +1,34 @@
-LFDB_LIB_IDENTIFIER = "LibFoodDrinkBuff"
-LFDB_LIB_IDENTIFIER_SHORT = "LibFDB"
+--Language files were loaded properly?
+if not _LIB_FOOD_DRINK_BUFF then return end
 
--- Library was not loaded yet?
+--Library identifiers
+LFDB_LIB_IDENTIFIER 		= "LibFoodDrinkBuff"
+LFDB_LIB_IDENTIFIER_SHORT 	= "LibFDB"
+
+-- Assure that library was not loaded yet?
 assert(not LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED), LFDB_LIB_IDENTIFIER))
 
-local lib = { }
+--Create global variable and assign local lib to global library
+local lib = {}
 LIB_FOOD_DRINK_BUFF = lib
 
+--Get the number of the blacklisted buff names (copy so the table can be set NIL again)
+local numBlacklistedBuffNames = _LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames
+lib.numBlacklistedBuffNames = numBlacklistedBuffNames
+--Destroy temporary global variable of language files again
+_LIB_FOOD_DRINK_BUFF = nil
 
 -------------------------
--- SUPPORTED LANGUAGES --
+--	SAVED VARIABLES    --
 -------------------------
-LFDB_LANGUAGE_ENGLISH = "en"
-LFDB_LANGUAGE_GERMAN = "de"
-LFDB_LANGUAGE_FRENCH = "fr"
+lib.svName = "LibFoodDrinkBuff_Save"
 
+---------------
+-- LANGUAGES --
+---------------
+LFDB_LANGUAGE_ENGLISH	= "en"
+LFDB_LANGUAGE_GERMAN 	= "de"
+LFDB_LANGUAGE_FRENCH 	= "fr"
 lib.LANGUAGES_SUPPORTED =
 {
 	[LFDB_LANGUAGE_ENGLISH] = true,
@@ -22,20 +36,29 @@ lib.LANGUAGES_SUPPORTED =
 	[LFDB_LANGUAGE_FRENCH] = true,
 }
 
-lib.BLACKLIST_STRING_PATTERN =
-{
-	[LFDB_LANGUAGE_ENGLISH] = { "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth", "Ambrosia" },
-	[LFDB_LANGUAGE_GERMAN] = { "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth", "Ambrosia" },
-	[LFDB_LANGUAGE_FRENCH] = { "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth", "Ambroisie" },
-}
-
+--Client language
 local language = GetCVar("language.2")
-lib.clientLanguage = lib.LANGUAGES_SUPPORTED[language] and language or LFDB_LANGUAGE_ENGLISH
+lib.clientLanguage = (lib.LANGUAGES_SUPPORTED[language] and language) or LFDB_LANGUAGE_ENGLISH
 
+----------------------------------
+-- BLACKLISTED STRINGS OF BUFFS --
+----------------------------------
+--Create the blacklist string pattern table
+local blacklistedStringPatternTable = {}
+for index=1, numBlacklistedBuffNames, 1 do
+	local blacklistedStringPattern = GetString("SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index))
+	if blacklistedStringPattern and blacklistedStringPattern ~= "" then
+		blacklistedStringPatternTable[blacklistedStringPattern] = true
+	else
+		break -- exit the for ... do loop as we found all
+	end
+end
+lib.BLACKLIST_STRING_PATTERN = blacklistedStringPatternTable
 
 ----------------------------------------------------
 -- BUFF TYPES - LibFoodDrinkBuff_buffTypeConstant --
 ----------------------------------------------------
+--Base value constants
 LFDB_BUFF_TYPE_NONE = 0
 LFDB_BUFF_TYPE_MAX_HEALTH = 1
 LFDB_BUFF_TYPE_MAX_MAGICKA = 2
@@ -46,6 +69,7 @@ LFDB_BUFF_TYPE_REGEN_STAMINA = 32
 LFDB_BUFF_TYPE_SPECIAL_VAMPIRE = 64
 LFDB_BUFF_TYPE_FIND_FISHES = 128
 LFDB_BUFF_TYPE_WEREWOLF_TRANSFORMATION = 256
+--Calculated constants based on the base values
 LFDB_BUFF_TYPE_MAX_ALL = LFDB_BUFF_TYPE_MAX_HEALTH + LFDB_BUFF_TYPE_MAX_MAGICKA + LFDB_BUFF_TYPE_MAX_STAMINA
 LFDB_BUFF_TYPE_MAX_ALL_REGEN_HEALTH = LFDB_BUFF_TYPE_MAX_ALL + LFDB_BUFF_TYPE_REGEN_HEALTH
 LFDB_BUFF_TYPE_MAX_HEALTH_MAGICKA = LFDB_BUFF_TYPE_MAX_HEALTH + LFDB_BUFF_TYPE_MAX_MAGICKA

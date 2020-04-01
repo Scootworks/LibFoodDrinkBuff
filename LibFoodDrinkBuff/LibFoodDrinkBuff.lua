@@ -1,5 +1,7 @@
-local lib = LIB_FOOD_DRINK_BUFF
+-- Assure that library was loaded properly
+assert(LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING), LFDB_LIB_IDENTIFIER))
 
+local lib = LIB_FOOD_DRINK_BUFF
 
 --------------------
 -- MAIN FUNCTIONS --
@@ -42,7 +44,7 @@ function lib:GetFoodBuffInfos(unitTag)
 		for i = 1, numBuffs do
 			-- Returns 13: string buffName, number timeStarted, number timeEnding, number buffSlot, number stackCount, string iconFilename, string buffType, number effectType, number abilityType, number statusEffectType, number abilityId, bool canClickOff, bool castByPlayer
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
-			buffTypeFoodDrink, isDrink = lib:GetBuffTypeInfos(abilityId)
+			buffTypeFoodDrink, isDrink = self:GetBuffTypeInfos(abilityId)
 			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
 				return buffTypeFoodDrink, isDrink, abilityId, ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ABILITY_NAME, buffName), timeStarted, timeEnding, iconTexture, self:GetTimeLeftInSeconds(timeEnding)
 			end
@@ -58,7 +60,7 @@ end
 
 function lib:GetDrinkBuffAbilityData()
 -- Returns 1: table drinkBuffAbilityIds = LibFoodDrinkBuff_buffTypeConstant
-	return lib.DRINK_BUFF_ABILITIES
+	return self.DRINK_BUFF_ABILITIES
 end
 
 function lib:IsFoodBuffActive(unitTag)
@@ -68,7 +70,7 @@ function lib:IsFoodBuffActive(unitTag)
 		local abilityId, buffTypeFoodDrink
 		for i = 1, numBuffs do
 			abilityId = select(11, GetUnitBuffInfo(unitTag, i))
-			buffTypeFoodDrink = lib:GetBuffTypeInfos(abilityId)
+			buffTypeFoodDrink = self:GetBuffTypeInfos(abilityId)
 			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
 				return true
 			end
@@ -84,7 +86,7 @@ function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 		local timeEnding, abilityId, buffTypeFoodDrink
 		for i = 1, numBuffs do
 			timeEnding, _, _, _, _, _, _, _, abilityId = select(3, GetUnitBuffInfo(unitTag, i))
-			buffTypeFoodDrink = lib:GetBuffTypeInfos(abilityId)
+			buffTypeFoodDrink = self:GetBuffTypeInfos(abilityId)
 			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
 				return true, self:GetTimeLeftInSeconds(timeEnding), abilityId
 			end
@@ -95,7 +97,7 @@ end
 
 function lib:IsAbilityAFoodBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityAFoodBuff(true) or false; or nil if not a food or drink buff
-	local _, isDrinkTrueOrFoodFalse = lib:GetBuffTypeInfos(abilityId)
+	local _, isDrinkTrueOrFoodFalse = self:GetBuffTypeInfos(abilityId)
 	if isDrinkTrueOrFoodFalse == true then
 		return false
 	elseif isDrinkTrueOrFoodFalse == false then
@@ -106,7 +108,7 @@ end
 
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or false; or nil if not a food or drink buff
-	local _, isDrinkTrueOrFoodFalse = lib:GetBuffTypeInfos(abilityId)
+	local _, isDrinkTrueOrFoodFalse = self:GetBuffTypeInfos(abilityId)
 	if isDrinkTrueOrFoodFalse == true then
 		return true
 	elseif isDrinkTrueOrFoodFalse == false then
@@ -119,7 +121,7 @@ function lib:IsConsumableItem(bagId, slotIndex)
 -- Returns 1: bool isConsumableItem
 	local itemType = GetItemType(bagId, slotIndex)
 	if itemType == ITEMTYPE_DRINK or itemType == ITEMTYPE_FOOD then
-		return lib:DoesStringContainsBlacklistPattern(GetItemName(bagId, slotIndex)) == false
+		return self:DoesStringContainsBlacklistPattern(GetItemName(bagId, slotIndex)) == false
 	end
 	return false
 end
@@ -163,10 +165,10 @@ if not lib.chat.Print then
 end
 
 -- Reads the addon version from the addon's txt manifest file tag ##AddOnVersion
-local addOnManager = GetAddOnManager()
 function lib:GetAddonVersionFromManifest(addOnNameString)
 -- Returns 1: number nilable:addOnVersion
-	if addOnNameString then
+	if addOnNameString and addOnNameString ~= "" then
+		local addOnManager = GetAddOnManager()
 		local numAddOns = addOnManager:GetNumAddOns()
 		for i = 1, numAddOns do
 			if addOnManager:GetAddOnInfo(i) == addOnNameString then
@@ -180,7 +182,7 @@ end
 -- Check if a string contains a blacklisted pattern
 function lib:DoesStringContainsBlacklistPattern(text)
 	local patternFound
-	local blacklistStringPattern = lib.BLACKLIST_STRING_PATTERN[lib.clientLanguage]
+	local blacklistStringPattern = self.BLACKLIST_STRING_PATTERN
 	for index, pattern in ipairs(blacklistStringPattern) do
 		patternFound = text:lower():find(pattern:lower())
 		if patternFound then
@@ -193,11 +195,11 @@ end
 -- Get the ability's buffType (food or drink)
 function lib:GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
-	local drinkBuffType = lib.DRINK_BUFF_ABILITIES[abilityId]
+	local drinkBuffType = self.DRINK_BUFF_ABILITIES[abilityId]
 	if drinkBuffType then
 		return drinkBuffType, true
 	end
-	local foodBuffType = lib.FOOD_BUFF_ABILITIES[abilityId]
+	local foodBuffType = self.FOOD_BUFF_ABILITIES[abilityId]
 	if foodBuffType then
 		return foodBuffType, false
 	end
@@ -223,17 +225,16 @@ end
 -- but DO NOT USE the filterType REGISTER_FILTER_ABILITY_ID, because this is already handled by the function (RegisterAbilityIdsFilterOnEventEffectChanged) itself!
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
 function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace, callbackFunc, ...)
--- Returns 1: nilable:succesfulRegister
+	-- Returns 1: nilable:succesfulRegister
+	if addOnEventNamespace == nil or addOnEventNamespace == "" or callbackFunc == nil then return nil end
 	local typeNamespace = type(addOnEventNamespace) == "string"
-	if typeNamespace then
-		assert(addOnEventNamespace ~= "", LFDB_LIB_IDENTIFIER .. ": Parameter 'addOnEventNamespace' is an empty string.")
-		assert(type(callbackFunc) == "function", LFDB_LIB_IDENTIFIER .. ": Parameter 'callbackFunc' is not a function.")
-
+	local typeFunc = type(callbackFunc) == "function"
+	if typeNamespace == true and typeFunc == true then
 		local index = GetIndexOfNamespaceInEventsList(self.eventList, addOnEventNamespace)
 		if not index then
 			EVENT_MANAGER:RegisterForEvent(addOnEventNamespace, EVENT_EFFECT_CHANGED, function(_, ...)
 				local abilityId = select(15, ...)
-				if lib.FOOD_BUFF_ABILITIES[abilityId] or lib.DRINK_BUFF_ABILITIES[abilityId] then
+				if self.FOOD_BUFF_ABILITIES[abilityId] or self.DRINK_BUFF_ABILITIES[abilityId] then
 					callbackFunc(...)
 					-- Returns 16: changeType, effectSlot, effectName, unitTag, beginTime, endTime, stackCount, iconName, buffType, effectType, abilityType, statusEffectType, unitName, unitId, abilityId, sourceType
 				end
@@ -255,7 +256,6 @@ function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace, c
 			return true
 		end
 	end
-	assert(typeNamespace, LFDB_LIB_IDENTIFIER .. ": Parameter 'addOnEventNamespace' is not a string.")
 	return nil
 end
 
@@ -279,11 +279,10 @@ function lib:Initialize()
 	self.version = self:GetAddonVersionFromManifest(LFDB_LIB_IDENTIFIER)
 	self.eventList = { }
 
-	-- the collector is only active, if you have LibAsync
+	-- [Libraries] --
+	--LibASync
 	self.async = LibAsync
-	if self.async then
-		lib:InitializeCollector()
-	end
+	self:InitializeCollector()
 end
 
 local function OnAddOnLoaded(_, addOnName)

@@ -1,3 +1,6 @@
+-- Assure that library was loaded properly
+assert(LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING), LFDB_LIB_IDENTIFIER))
+
 local lib = LIB_FOOD_DRINK_BUFF
 
 --The drink buff abilityIds and their LibFoodDrinkBuff_buffTypeConstant

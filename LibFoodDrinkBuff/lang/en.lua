@@ -1,3 +1,4 @@
+--English texts
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED", "Library \'%s\' was already loaded.")
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING", "Error: Library \'%s\' constants are missing!")
 
@@ -12,3 +13,17 @@ ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING", "<<1>>!\nArgument f
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS", "There is no active buff.")
 
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT", "<<1>> food / drinks were found.\n\nYou have to reload UI to update your savedVariables file.\n\nDo you want to reload UI now?")
+
+
+--Create blacklisted buff names
+local blacklistedBuffNamesEN = {
+    "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth", "Ambrosia"
+}
+for index, blacklisteBuffName in ipairs(blacklistedBuffNamesEN) do
+    ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index), blacklisteBuffName)
+end
+
+--Add temporary global variable
+_LIB_FOOD_DRINK_BUFF = {}
+--Add the constant for the number of blacklisted buff names
+_LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames = #blacklistedBuffNamesEN

@@ -8,3 +8,16 @@ SafeAddString(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, "<<1>>!\nParamètre manqu
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS, "Il n'y a pas de buff actif.", 0)
 
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, "<<1>> nourritures / boissons trouvé(s).\n\nVous devez recharger l'interface pour mettre à jour le fichier savedVariables.\n\nRecharger l'interface maintenant?", 0)
+
+--Create blacklisted buff names
+local blacklistedBuffNamesFR = {
+    "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth", "Ambroisie"
+}
+for index, blacklisteBuffName in ipairs(blacklistedBuffNamesFR) do
+    SafeAddString("SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index), blacklisteBuffName, 0)
+end
+--Add the constant for the number of blacklisted buff names, if higher then before
+local numBlacklistedBuffNamesBefore = _LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames or 0
+--Add the constant for the number of blacklisted buff names, if higher then before
+_LIB_FOOD_DRINK_BUFF = _LIB_FOOD_DRINK_BUFF or {}
+_LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames = #blacklistedBuffNamesFR
