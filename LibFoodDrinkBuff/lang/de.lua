@@ -14,8 +14,8 @@ local blacklistedBuffNamesDE = {
     "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth", "Ambrosia"
 }
 for index, blacklisteBuffName in ipairs(blacklistedBuffNamesDE) do
-    SafeAddString("SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index), blacklisteBuffName, 0)
+    SafeAddString(_G["SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index)], blacklisteBuffName, 0)
 end
---Add the constant for the number of blacklisted buff names, if higher then before
+--Add the constant for the number of blacklisted buff names
 _LIB_FOOD_DRINK_BUFF = _LIB_FOOD_DRINK_BUFF or {}
 _LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames = #blacklistedBuffNamesDE

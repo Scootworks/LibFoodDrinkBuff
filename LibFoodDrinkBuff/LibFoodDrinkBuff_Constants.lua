@@ -13,9 +13,10 @@ local lib = {}
 LIB_FOOD_DRINK_BUFF = lib
 
 --Get the number of the blacklisted buff names (copy so the table can be set NIL again)
-local numBlacklistedBuffNames = _LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames
+local numBlacklistedBuffNames = (_LIB_FOOD_DRINK_BUFF and _LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames) or 10
 lib.numBlacklistedBuffNames = numBlacklistedBuffNames
---Destroy temporary global variable of language files again
+d(">numBlacklistedBuffNames: " ..tostring(lib.numBlacklistedBuffNames))
+--Destroy temporary global variable, coming from language files, again
 _LIB_FOOD_DRINK_BUFF = nil
 
 -------------------------
@@ -46,7 +47,7 @@ lib.clientLanguage = (lib.LANGUAGES_SUPPORTED[language] and language) or LFDB_LA
 --Create the blacklist string pattern table
 local blacklistedStringPatternTable = {}
 for index=1, numBlacklistedBuffNames, 1 do
-	local blacklistedStringPattern = GetString("SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index))
+	local blacklistedStringPattern = GetString(_G["SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index)])
 	if blacklistedStringPattern and blacklistedStringPattern ~= "" then
 		blacklistedStringPatternTable[blacklistedStringPattern] = true
 	else
