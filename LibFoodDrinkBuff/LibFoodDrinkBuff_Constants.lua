@@ -1,6 +1,3 @@
---Language files were loaded properly?
-if not _LIB_FOOD_DRINK_BUFF then return end
-
 --Library identifiers
 LFDB_LIB_IDENTIFIER 		= "LibFoodDrinkBuff"
 LFDB_LIB_IDENTIFIER_SHORT 	= "LibFDB"
@@ -11,13 +8,8 @@ assert(not LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_L
 --Create global variable and assign local lib to global library
 local lib = {}
 LIB_FOOD_DRINK_BUFF = lib
-
---Get the number of the blacklisted buff names (copy so the table can be set NIL again)
-local numBlacklistedBuffNames = (_LIB_FOOD_DRINK_BUFF and _LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames) or 10
-lib.numBlacklistedBuffNames = numBlacklistedBuffNames
-d(">numBlacklistedBuffNames: " ..tostring(lib.numBlacklistedBuffNames))
---Destroy temporary global variable, coming from language files, again
-_LIB_FOOD_DRINK_BUFF = nil
+--2nd, more easy, global pointer
+LibFoodDrinkBuff = lib
 
 -------------------------
 --	SAVED VARIABLES    --
@@ -44,17 +36,14 @@ lib.clientLanguage = (lib.LANGUAGES_SUPPORTED[language] and language) or LFDB_LA
 ----------------------------------
 -- BLACKLISTED STRINGS OF BUFFS --
 ----------------------------------
---Create the blacklist string pattern table
-local blacklistedStringPatternTable = {}
-for index=1, numBlacklistedBuffNames, 1 do
-	local blacklistedStringPattern = GetString(_G["SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index)])
-	if blacklistedStringPattern and blacklistedStringPattern ~= "" then
-		blacklistedStringPatternTable[blacklistedStringPattern] = true
-	else
-		break -- exit the for ... do loop as we found all
-	end
+lib.BLACKLIST_STRING_PATTERN = {}
+
+--Create the string constants of the Blacklisted buff names
+if _LIB_FOOD_DRINK_BUFF_BLACKLISTED and #_LIB_FOOD_DRINK_BUFF_BLACKLISTED > 0 then
+	lib.BLACKLIST_STRING_PATTERN = ZO_ShallowTableCopy(_LIB_FOOD_DRINK_BUFF_BLACKLISTED)
+	--Destroy temporary global variable, coming from language files, again
+	_LIB_FOOD_DRINK_BUFF_BLACKLISTED = nil
 end
-lib.BLACKLIST_STRING_PATTERN = blacklistedStringPatternTable
 
 ----------------------------------------------------
 -- BUFF TYPES - LibFoodDrinkBuff_buffTypeConstant --

@@ -7,15 +7,12 @@ SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, "Die Durchsuchung ist beende
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, "<<1>>!\nArgument |cFFFFFF/dumpfdb|r fehlt!\nBenutze |cFFFFFFall|r - komplette Liste generieren\noder |cFFFFFFnew|r - nur neue Speisen/Getränke generieren", 0)
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS, "Es gibt keinen aktiven Buff.", 0)
 
-SafeAddString(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, "<<1>> Speisen / Getränke gefunden.\n\nDamit Eure savedVariables Datei aktualisiert wird, muss die Benutzeroberfläche neu laden werden.\n\nSoll die Benutzeroberfläche jetzt neu geladen werden?", 0)
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, "<<1>> Speisen / Getränke gefunden.\n\nDamit Eure SavedVariables Datei aktualisiert wird, muss die Benutzeroberfläche neu geladen werden.\n\nBenutzeroberfläche jetzt neu laden?", 0)
 
 --Create blacklisted buff names
 local blacklistedBuffNamesDE = {
     "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth", "Ambrosia"
 }
-for index, blacklisteBuffName in ipairs(blacklistedBuffNamesDE) do
-    SafeAddString(_G["SI_LIB_FOOD_DRINK_BUFF_BLACKLISTED_BUFFNAME_" .. tostring(index)], blacklisteBuffName, 0)
-end
 --Add the constant for the number of blacklisted buff names
-_LIB_FOOD_DRINK_BUFF = _LIB_FOOD_DRINK_BUFF or {}
-_LIB_FOOD_DRINK_BUFF.numBlacklistedBuffNames = #blacklistedBuffNamesDE
+_LIB_FOOD_DRINK_BUFF_BLACKLISTED = {}
+_LIB_FOOD_DRINK_BUFF_BLACKLISTED = blacklistedBuffNamesDE

@@ -183,6 +183,7 @@ end
 function lib:DoesStringContainsBlacklistPattern(text)
 	local patternFound
 	local blacklistStringPattern = self.BLACKLIST_STRING_PATTERN
+	if #blacklistStringPattern <= 0 then return false end
 	for index, pattern in ipairs(blacklistStringPattern) do
 		patternFound = text:lower():find(pattern:lower())
 		if patternFound then
