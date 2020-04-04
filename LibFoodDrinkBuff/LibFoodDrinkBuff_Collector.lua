@@ -110,10 +110,8 @@ function lib:InitializeCollector()
 				_G[self.svName] = self.sv
 			end
 			-- Clear old savedVars food and drink buff list of the current server
-			local sv = self.sv
-			local foodDrinkBuffList = sv.foodDrinkBuffList
-			foodDrinkBuffList = foodDrinkBuffList or {}
-			foodDrinkBuffList[worldName] = {}
+			self.sv.foodDrinkBuffList = self.sv.foodDrinkBuffList or {}
+			self.sv.foodDrinkBuffList[worldName] = {}
 
 			-- start new scan
 			startScanAbilities:For(1, MAX_ABILITY_ID):Do(function(abilityId)
@@ -122,9 +120,9 @@ function lib:InitializeCollector()
 				end
 			end):Then(function()
 				-- update the savedVars timestamp
-				sv.lastUpdated = sv.lastUpdated or {}
-				sv.lastUpdated[worldName] = {}
-				local lastUpdated = sv.lastUpdated[worldName]
+				self.sv.lastUpdated = self.sv.lastUpdated or {}
+				self.sv.lastUpdated[worldName] = {}
+				local lastUpdated = self.sv.lastUpdated[worldName]
 				lastUpdated.timestamp = os.date()
 				lastUpdated.saveType = saveType
 				notificationAfterCreatingFoodDrinkTable(worldName)
