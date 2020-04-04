@@ -159,7 +159,7 @@ if LibChatMessage then
 	lib.chat = LibChatMessage(LFDB_LIB_IDENTIFIER, LFDB_LIB_IDENTIFIER_SHORT)
 end
 if not lib.chat.Print then
-	lib.chat.Print = function(self, message)
+	function lib.chat:Print(message)
 		CHAT_ROUTER:AddDebugMessage(string.format("[%s] %s", LFDB_LIB_IDENTIFIER, message))
 	end
 end

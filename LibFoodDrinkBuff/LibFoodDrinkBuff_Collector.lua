@@ -4,9 +4,6 @@ assert(LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRA
 local lib = LIB_FOOD_DRINK_BUFF
 
 function lib:InitializeCollector()
-	--The collector is only active, if LibAsync is loaded
-	if not self.async then return end
-
 	--Register new ESO dialog
 	ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 	{
@@ -39,60 +36,36 @@ function lib:InitializeCollector()
 	local MAX_ABILITY_DURATION = 2000000
 
 	-- Add a slash command, to start collecting food/drink buffs
-	local startScanAbilities = self.async:Create(LFDB_LIB_IDENTIFIER .. "_Collector")
-	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
-		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
-		if saveType then
-			self.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
-			local worldName = GetWorldName()
-
-			-- Get and set the SavedVariables. We are not using ZO_SavedVars wrapper here but just the global table of self.svName!
-			if not self.sv then
-				_G[self.svName] = { }
-				self.sv = _G[self.svName]
-				--TODO: Why do we need this?
-				_G[self.svName] = self.sv
-			end
-			-- Clear old savedVars food and drink buff list of the current server
-			local sv = self.sv
-			sv.foodDrinkBuffList = sv.foodDrinkBuffList or { }
-			sv.foodDrinkBuffList[worldName] = { }
-
-			-- start new scan
-			startScanAbilities:For(1, MAX_ABILITY_ID):Do(function(abilityId)
-				if DoesAbilityExist(abilityId) then
-					self:AddToFoodDrinkTable(abilityId, saveType, worldName)
-				end
-			end):Then(function()
-				-- update the savedVars timestamp
-				sv.lastUpdated = sv.lastUpdated or { }
-				sv.lastUpdated[worldName] = { }
-				local lastUpdated = sv.lastUpdated[worldName]
-				lastUpdated.timestamp = os.date()
-				lastUpdated.saveType = saveType
-				self:NotificationAfterCreatingFoodDrinkTable(worldName)
-			end)
-
-		else
-			self.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
+	--The collector is only active, if LibAsync is loaded
+	if not self.async then
+		SLASH_COMMANDS["/dumpfdb"] = function()
+			self.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_LIB_ASYNC_NEEDED))
 		end
+		return
 	end
 
-	function lib:NotificationAfterCreatingFoodDrinkTable(worldName)
-		local countEntries = #self.sv.foodDrinkBuffList[worldName]
+
+--v- --Only working if LibAsync is enabled!                                                                      	 -v-
+	local startScanAbilities = self.async:Create(LFDB_LIB_IDENTIFIER .. "_Collector")
+
+	local function notificationAfterCreatingFoodDrinkTable(worldName)
+		worldName = worldName or GetWorldName()
+		local countEntries = #lib.sv.foodDrinkBuffList[worldName]
 		if countEntries > 0 then
 			local data = { countEntries = countEntries }
 			ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", data)
 		else
-			self.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
+			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
 		end
 	end
 
-	function lib:AddToFoodDrinkTable(abilityId, saveType, worldName)
-		if saveType == ARGUMENT_NEW and self:GetBuffTypeInfos(abilityId) ~= NONE then
+	local function addToFoodDrinkTable(abilityId, saveType, worldName)
+		if not lib.sv then return end
+		worldName = worldName or GetWorldName()
+		if saveType == ARGUMENT_NEW and lib:GetBuffTypeInfos(abilityId) ~= NONE then
 			return
 		end
-
+		local foodDrinkBuffListOfWorldName = lib.sv.foodDrinkBuffList[worldName]
 		-- We gonna check the abilityId parameter step by step to increase performance during the check.
 		if GetAbilityAngleDistance(abilityId) == 0 then
 			if GetAbilityRadius(abilityId) == 0 then
@@ -106,12 +79,12 @@ function lib:InitializeCollector()
 								if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
 									if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
 										local abilityName = GetAbilityName(abilityId)
-										if not self:DoesStringContainsBlacklistPattern(abilityName) then
+										if not lib:DoesStringContainsBlacklistPattern(abilityName) then
 											local ability = { }
 											ability.abilityId = abilityId
 											ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
 											ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
-											table.insert(self.sv.foodDrinkBuffList[worldName], ability)
+											table.insert(foodDrinkBuffListOfWorldName, ability)
 										end
 									end
 								end
@@ -120,6 +93,45 @@ function lib:InitializeCollector()
 					end
 				end
 			end
+		end
+	end
+
+	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
+		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
+		if saveType then
+			self.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
+			local worldName = GetWorldName()
+
+			-- Get and set the SavedVariables. We are not using ZO_SavedVars wrapper here but just the global table of self.svName!
+			if not self.sv then
+				_G[self.svName] = _G[self.svName] or { }
+				self.sv = _G[self.svName]
+				--TODO: Why do we need this?
+				_G[self.svName] = self.sv
+			end
+			-- Clear old savedVars food and drink buff list of the current server
+			local sv = self.sv
+			local foodDrinkBuffList = sv.foodDrinkBuffList
+			foodDrinkBuffList = foodDrinkBuffList or {}
+			foodDrinkBuffList[worldName] = {}
+
+			-- start new scan
+			startScanAbilities:For(1, MAX_ABILITY_ID):Do(function(abilityId)
+				if DoesAbilityExist(abilityId) then
+					addToFoodDrinkTable(abilityId, saveType, worldName)
+				end
+			end):Then(function()
+				-- update the savedVars timestamp
+				sv.lastUpdated = sv.lastUpdated or {}
+				sv.lastUpdated[worldName] = {}
+				local lastUpdated = sv.lastUpdated[worldName]
+				lastUpdated.timestamp = os.date()
+				lastUpdated.saveType = saveType
+				notificationAfterCreatingFoodDrinkTable(worldName)
+			end)
+
+		else
+			self.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
 		end
 	end
 end

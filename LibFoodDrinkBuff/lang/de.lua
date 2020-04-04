@@ -1,5 +1,6 @@
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED, "Bibliothek \'%s\' wurde bereits geladen.", 0)
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_CONSTANTS_MISSING, "Fehler: Bibliothek \'%s\' Konstanten fehlen!", 0)
+SafeAddString(SI_LIB_FOOD_DRINK_BUFF_LIB_ASYNC_NEEDED, "Fehler: Bibliothek \'LibAsync\' nicht geladen!", 0)
 
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_RELOAD, "Eure Benutzeroberfläche wird in |cFF00005 Sekunden|r neu geladen!", 0)
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START, "Die Durchsuchung von Speisen / Getränke wurde gestartet. Das kann einige Sekunden dauern...", 0)
