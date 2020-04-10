@@ -46,26 +46,23 @@ function lib:InitializeCollector()
 
 
 --v- --Only working if LibAsync is enabled!                                                                      	 -v-
+	local worldName = GetWorldName()
 	local startScanAbilities = self.async:Create(LFDB_LIB_IDENTIFIER .. "_Collector")
 
-	local function notificationAfterCreatingFoodDrinkTable(worldName)
-		worldName = worldName or GetWorldName()
-		local countEntries = #lib.sv.foodDrinkBuffList[worldName]
+	local function notificationAfterCreatingFoodDrinkTable()
+		local countEntries = #self.sv.foodDrinkBuffList[worldName]
 		if countEntries > 0 then
 			local data = { countEntries = countEntries }
 			ZO_Dialogs_ShowDialog("LIB_FOOD_DRINK_BUFF_FOUND_DATA", data)
 		else
-			lib.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
+			self.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXPORT_FINISH, countEntries))
 		end
 	end
 
-	local function addToFoodDrinkTable(abilityId, saveType, worldName)
-		if not lib.sv then return end
-		worldName = worldName or GetWorldName()
-		if saveType == ARGUMENT_NEW and lib:GetBuffTypeInfos(abilityId) ~= NONE then
+	local function addToFoodDrinkTable(abilityId, saveType)
+		if saveType == ARGUMENT_NEW and self:GetBuffTypeInfos(abilityId) ~= LFDB_BUFF_TYPE_NONE then
 			return
 		end
-		local foodDrinkBuffListOfWorldName = lib.sv.foodDrinkBuffList[worldName]
 		-- We gonna check the abilityId parameter step by step to increase performance during the check.
 		if GetAbilityAngleDistance(abilityId) == 0 then
 			if GetAbilityRadius(abilityId) == 0 then
@@ -79,12 +76,12 @@ function lib:InitializeCollector()
 								if GetAbilityTargetDescription(abilityId) == GetString(SI_TARGETTYPE2) then
 									if GetAbilityDescription(abilityId) ~= "" and GetAbilityEffectDescription(abilityId) == "" then
 										local abilityName = GetAbilityName(abilityId)
-										if not lib:DoesStringContainsBlacklistPattern(abilityName) then
+										if not self:DoesStringContainsBlacklistPattern(abilityName) then
 											local ability = { }
 											ability.abilityId = abilityId
 											ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
 											ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
-											table.insert(foodDrinkBuffListOfWorldName, ability)
+											table.insert(self.sv.foodDrinkBuffList[worldName], ability)
 										end
 									end
 								end
@@ -96,38 +93,34 @@ function lib:InitializeCollector()
 		end
 	end
 
-	SLASH_COMMANDS["/dumpfdb"] = function(saveType)
-		saveType = saveType == "new" and ARGUMENT_NEW or saveType == "all" and ARGUMENT_ALL
+	SLASH_COMMANDS["/dumpfdb"] = function(arg)
+		local saveType = arg == "new" and ARGUMENT_NEW or arg == "all" and ARGUMENT_ALL
 		if saveType then
 			self.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
-			local worldName = GetWorldName()
 
 			-- Get and set the SavedVariables. We are not using ZO_SavedVars wrapper here but just the global table of self.svName!
-			if not self.sv then
-				_G[self.svName] = _G[self.svName] or { }
-				self.sv = _G[self.svName]
-				--TODO: Why do we need this?
-				_G[self.svName] = self.sv
-			end
+			_G[self.svName] = _G[self.svName] or { }
+			self.sv = _G[self.svName]
+
 			-- Clear old savedVars food and drink buff list of the current server
-			self.sv.foodDrinkBuffList = self.sv.foodDrinkBuffList or {}
-			self.sv.foodDrinkBuffList[worldName] = {}
+			self.sv.foodDrinkBuffList = self.sv.foodDrinkBuffList or { }
+			self.sv.foodDrinkBuffList[worldName] = { }
 
 			-- start new scan
 			startScanAbilities:For(1, MAX_ABILITY_ID):Do(function(abilityId)
 				if DoesAbilityExist(abilityId) then
-					addToFoodDrinkTable(abilityId, saveType, worldName)
+					addToFoodDrinkTable(abilityId, saveType)
 				end
 			end):Then(function()
 				-- update the savedVars timestamp
-				self.sv.lastUpdated = self.sv.lastUpdated or {}
-				self.sv.lastUpdated[worldName] = {}
+				self.sv.lastUpdated = self.sv.lastUpdated or { }
+				self.sv.lastUpdated[worldName] = { }
+
 				local lastUpdated = self.sv.lastUpdated[worldName]
 				lastUpdated.timestamp = os.date()
-				lastUpdated.saveType = saveType
+				lastUpdated.saveType = arg
 				notificationAfterCreatingFoodDrinkTable(worldName)
 			end)
-
 		else
 			self.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
 		end
