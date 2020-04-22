@@ -80,7 +80,7 @@ function lib:InitializeCollector()
 											local ability = { }
 											ability.abilityId = abilityId
 											ability.abilityName = ZO_CachedStrFormat(SI_ABILITY_NAME, abilityName)
-											ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, abilityName)
+											ability.lua = ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_EXCEL, abilityId, ability.abilityName)
 											table.insert(self.sv.foodDrinkBuffList[worldName], ability)
 										end
 									end
