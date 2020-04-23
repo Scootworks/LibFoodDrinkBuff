@@ -15,5 +15,4 @@ local blacklistedBuffNamesFR = {
     "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth", "Ambroisie"
 }
 --Add the constant for the number of blacklisted buff names
-_LIB_FOOD_DRINK_BUFF_BLACKLISTED = {}
 _LIB_FOOD_DRINK_BUFF_BLACKLISTED = blacklistedBuffNamesFR

@@ -21,5 +21,4 @@ local blacklistedBuffNamesEN = {
     "Soul Summons", "Experience", "EXP Buff", "Pelinal", "MillionHealth", "Ambrosia"
 }
 --Add temporary global variable
-_LIB_FOOD_DRINK_BUFF_BLACKLISTED = {}
 _LIB_FOOD_DRINK_BUFF_BLACKLISTED = blacklistedBuffNamesEN
