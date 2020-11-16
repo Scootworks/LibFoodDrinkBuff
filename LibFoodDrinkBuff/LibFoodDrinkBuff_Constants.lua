@@ -1,27 +1,29 @@
 --Library identifiers
-LFDB_LIB_IDENTIFIER 		= "LibFoodDrinkBuff"
-LFDB_LIB_IDENTIFIER_SHORT 	= "LibFDB"
+LFDB_LIB_IDENTIFIER = "LibFoodDrinkBuff"
+LFDB_LIB_IDENTIFIER_SHORT = "LibFDB"
 
 -- Assure that library was not loaded yet?
 assert(not LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRARY_LOADED), LFDB_LIB_IDENTIFIER))
 
---Create global variable and assign local lib to global library
+
 local lib = {}
+
+-- Global pointers
 LIB_FOOD_DRINK_BUFF = lib
---2nd, more easy, global pointer
 LibFoodDrinkBuff = lib
 
--------------------------
---	SAVED VARIABLES    --
--------------------------
-lib.svName = "LibFoodDrinkBuff_Save"
+---------------------
+-- SAVED VARIABLES --
+---------------------
+lib.savedVarsName = "LibFoodDrinkBuff_Save"
 
 ---------------
 -- LANGUAGES --
 ---------------
-LFDB_LANGUAGE_ENGLISH	= "en"
-LFDB_LANGUAGE_GERMAN 	= "de"
-LFDB_LANGUAGE_FRENCH 	= "fr"
+LFDB_LANGUAGE_ENGLISH = "en"
+LFDB_LANGUAGE_GERMAN = "de"
+LFDB_LANGUAGE_FRENCH = "fr"
+
 lib.LANGUAGES_SUPPORTED =
 {
 	[LFDB_LANGUAGE_ENGLISH] = true,
@@ -29,26 +31,21 @@ lib.LANGUAGES_SUPPORTED =
 	[LFDB_LANGUAGE_FRENCH] = true,
 }
 
---Client language
-local language = GetCVar("language.2")
-lib.clientLanguage = (lib.LANGUAGES_SUPPORTED[language] and language) or LFDB_LANGUAGE_ENGLISH
+do
+	local language = GetCVar("language.2")
+	lib.clientLanguage = lib.LANGUAGES_SUPPORTED[language] and language or LFDB_LANGUAGE_ENGLISH
+end
 
 ----------------------------------
 -- BLACKLISTED STRINGS OF BUFFS --
 ----------------------------------
-lib.BLACKLIST_STRING_PATTERN = {}
-
---Create the string constants of the Blacklisted buff names
-if _LIB_FOOD_DRINK_BUFF_BLACKLISTED and #_LIB_FOOD_DRINK_BUFF_BLACKLISTED > 0 then
-	lib.BLACKLIST_STRING_PATTERN = ZO_ShallowTableCopy(_LIB_FOOD_DRINK_BUFF_BLACKLISTED)
-	--Destroy temporary global variable, coming from language files, again
-	_LIB_FOOD_DRINK_BUFF_BLACKLISTED = nil
-end
+lib.BLACKLIST_STRING_PATTERN = ZO_ShallowTableCopy(_LIB_FOOD_DRINK_BUFF_BLACKLISTED)
+_LIB_FOOD_DRINK_BUFF_BLACKLISTED = nil -- remove temp data
 
 ----------------------------------------------------
 -- BUFF TYPES - LibFoodDrinkBuff_buffTypeConstant --
 ----------------------------------------------------
---Base value constants
+-- Base value constants
 LFDB_BUFF_TYPE_NONE = 0
 LFDB_BUFF_TYPE_MAX_HEALTH = 1
 LFDB_BUFF_TYPE_MAX_MAGICKA = 2
@@ -59,7 +56,8 @@ LFDB_BUFF_TYPE_REGEN_STAMINA = 32
 LFDB_BUFF_TYPE_SPECIAL_VAMPIRE = 64
 LFDB_BUFF_TYPE_FIND_FISHES = 128
 LFDB_BUFF_TYPE_WEREWOLF_TRANSFORMATION = 256
---Calculated constants based on the base values
+
+-- Calculated constants based on the base values
 LFDB_BUFF_TYPE_MAX_ALL = LFDB_BUFF_TYPE_MAX_HEALTH + LFDB_BUFF_TYPE_MAX_MAGICKA + LFDB_BUFF_TYPE_MAX_STAMINA
 LFDB_BUFF_TYPE_MAX_ALL_REGEN_HEALTH = LFDB_BUFF_TYPE_MAX_ALL + LFDB_BUFF_TYPE_REGEN_HEALTH
 LFDB_BUFF_TYPE_MAX_HEALTH_MAGICKA = LFDB_BUFF_TYPE_MAX_HEALTH + LFDB_BUFF_TYPE_MAX_MAGICKA
