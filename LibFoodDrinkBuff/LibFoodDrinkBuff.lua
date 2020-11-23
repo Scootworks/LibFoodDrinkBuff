@@ -267,6 +267,10 @@ end
 -- Unregister the register function above
 function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace)
 -- Returns 1: nilable:succesfulUnregister
+	if addOnEventNamespace == nil or addOnEventNamespace == "" then
+		return
+	end
+
 	if type(addOnEventNamespace) == "string" then
 		local index = GetIndexOfNamespaceInEventsList(self.eventList, addOnEventNamespace)
 		if index then
