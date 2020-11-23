@@ -4,7 +4,7 @@ assert(LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRA
 local lib = LIB_FOOD_DRINK_BUFF
 
 local IS_DRINK = true
-local IS_FOOD = false
+local IS_FOOD = not IS_DRINK
 
 --------------------
 -- MAIN FUNCTIONS --
@@ -210,7 +210,7 @@ function lib:GetBuffTypeInfos(abilityId)
 	end
 	local foodBuffType = self.FOOD_BUFF_ABILITIES[abilityId]
 	if foodBuffType then
-		return foodBuffType, not IS_DRINK
+		return foodBuffType, IS_FOOD
 	end
 	return LFDB_BUFF_TYPE_NONE, nil
 end
