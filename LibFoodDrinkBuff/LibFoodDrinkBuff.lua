@@ -139,11 +139,7 @@ function lib:ConsumeItemFromInventory(slotIndex)
 	local canInteract = CanInteractWithItem(BAG_BACKPACK, slotIndex)
 	if usable and canInteract and not usableOnlyFromActionSlot then
 		if self:IsConsumableItem(BAG_BACKPACK, slotIndex) then
-			if IsProtectedFunction("UseItem") then
-				return CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
-			else
-				return UseItem(BAG_BACKPACK, slotIndex)
-			end
+			CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
 		end
 	end
 	return false
