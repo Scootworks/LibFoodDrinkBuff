@@ -10,9 +10,8 @@ SafeAddString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS, "Es gibt keinen aktiven Buff.", 0
 
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, "<<1>> Speisen / Getränke gefunden.\n\nDamit Eure SavedVariables Datei aktualisiert wird, muss die Benutzeroberfläche neu geladen werden.\n\nBenutzeroberfläche jetzt neu laden?", 0)
 
---Create blacklisted buff names
-local blacklistedBuffNamesDE = {
-    "Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth", "Ambrosia"
+-- temporary blacklist
+_LIB_FOOD_DRINK_BUFF_BLACKLISTED =
+{
+	"Seelenbeschwörung", "Erfahrungs", "Pelinal", "MillionHealth", "Ambrosia", "Allianzkriegssegen",
 }
---Add the constant for the number of blacklisted buff names
-_LIB_FOOD_DRINK_BUFF_BLACKLISTED = blacklistedBuffNamesDE

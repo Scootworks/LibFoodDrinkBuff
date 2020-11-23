@@ -1,11 +1,11 @@
-## APIVersion: 100030 100031
+## APIVersion: 100033 100034
 ## Title: LibFoodDrinkBuff
-## Version: 15
-## AddOnVersion: 15
+## Version: 16
+## AddOnVersion: 16
 ## IsLibrary: true
 ## Author: Scootworks & Baertram
 ## SavedVariables: LibFoodDrinkBuff_Save
-## OptionalDependsOn: LibAsync>=20100 LibChatMessage>=100
+## OptionalDependsOn: LibAsync>=20200 LibChatMessage>=100
 
 ; This Add-on is not created by, affiliated with or sponsored by ZeniMax
 ; Media Inc. or its affiliates. The Elder Scrolls® and related logos are

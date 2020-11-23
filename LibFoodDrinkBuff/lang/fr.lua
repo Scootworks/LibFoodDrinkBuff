@@ -10,9 +10,8 @@ SafeAddString(SI_LIB_FOOD_DRINK_BUFF_NO_BUFFS, "Il n'y a pas de buff actif.", 0)
 
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_DIALOG_MAINTEXT, "<<1>> nourritures / boissons trouvé(s).\n\nVous devez recharger l'interface pour mettre à jour le fichier SavedVariables.\n\nRecharger l'interface maintenant?", 0)
 
---Create blacklisted buff names
-local blacklistedBuffNamesFR = {
-    "Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth", "Ambroisie"
+-- temporary blacklist
+_LIB_FOOD_DRINK_BUFF_BLACKLISTED =
+{
+	"Invocation d'âme", "Expérience", "Bonus EXP", "Pélinal", "MillionHealth", "Ambroisie", "compétence d'alliance",
 }
---Add the constant for the number of blacklisted buff names
-_LIB_FOOD_DRINK_BUFF_BLACKLISTED = blacklistedBuffNamesFR

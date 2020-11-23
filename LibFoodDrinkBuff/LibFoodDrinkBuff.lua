@@ -3,6 +3,9 @@ assert(LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRA
 
 local lib = LIB_FOOD_DRINK_BUFF
 
+local IS_DRINK = true
+local IS_FOOD = not IS_DRINK
+
 --------------------
 -- MAIN FUNCTIONS --
 --------------------
@@ -97,31 +100,35 @@ end
 
 function lib:IsAbilityAFoodBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityAFoodBuff(true) or false; or nil if not a food or drink buff
-	local _, isDrinkTrueOrFoodFalse = self:GetBuffTypeInfos(abilityId)
-	if isDrinkTrueOrFoodFalse == true then
-		return false
-	elseif isDrinkTrueOrFoodFalse == false then
-		return true
+	local isDrinkTrueOrFoodFalse = select(2, self:GetBuffTypeInfos(abilityId))
+	if isDrinkTrueOrFoodFalse == IS_DRINK then
+		return IS_FOOD
+	elseif isDrinkTrueOrFoodFalse == IS_FOOD then
+		return IS_DRINK
 	end
 	return nil
 end
 
 function lib:IsAbilityADrinkBuff(abilityId)
 -- Returns 1: nilable:bool isAbilityADrinkBuff(true) or false; or nil if not a food or drink buff
-	local _, isDrinkTrueOrFoodFalse = self:GetBuffTypeInfos(abilityId)
-	if isDrinkTrueOrFoodFalse == true then
-		return true
-	elseif isDrinkTrueOrFoodFalse == false then
-		return false
+	local isDrinkTrueOrFoodFalse = select(2, self:GetBuffTypeInfos(abilityId))
+	if isDrinkTrueOrFoodFalse == IS_DRINK then
+		return IS_DRINK
+	elseif isDrinkTrueOrFoodFalse == IS_FOOD then
+		return IS_FOOD
 	end
 	return nil
 end
 
-function lib:IsConsumableItem(bagId, slotIndex)
+function lib:IsConsumableItem(bagId, slotIndex, ignoreBlacklistItems)
 -- Returns 1: bool isConsumableItem
 	local itemType = GetItemType(bagId, slotIndex)
 	if itemType == ITEMTYPE_DRINK or itemType == ITEMTYPE_FOOD then
-		return self:DoesStringContainsBlacklistPattern(GetItemName(bagId, slotIndex)) == false
+		if ignoreBlacklistItems then
+			return self:DoesStringContainsBlacklistPattern(GetItemName(bagId, slotIndex)) == false
+		else
+			return true
+		end
 	end
 	return false
 end
@@ -132,11 +139,7 @@ function lib:ConsumeItemFromInventory(slotIndex)
 	local canInteract = CanInteractWithItem(BAG_BACKPACK, slotIndex)
 	if usable and canInteract and not usableOnlyFromActionSlot then
 		if self:IsConsumableItem(BAG_BACKPACK, slotIndex) then
-			if IsProtectedFunction("UseItem") then
-				return CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
-			else
-				return UseItem(BAG_BACKPACK, slotIndex)
-			end
+			CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
 		end
 	end
 	return false
@@ -176,21 +179,22 @@ function lib:GetAddonVersionFromManifest(addOnNameString)
 			end
 		end
 	end
-	return nil
 end
 
 -- Check if a string contains a blacklisted pattern
-function lib:DoesStringContainsBlacklistPattern(text)
-	local patternFound
-	local blacklistStringPattern = self.BLACKLIST_STRING_PATTERN
-	if #blacklistStringPattern <= 0 then return false end
-	for index, pattern in ipairs(blacklistStringPattern) do
-		patternFound = text:lower():find(pattern:lower())
-		if patternFound then
-			return true
-		end
+do
+	local function IsStringPatternInText(text, pattern)
+		return text:lower():find(pattern:lower())
 	end
-	return false
+
+	function lib:DoesStringContainsBlacklistPattern(text)
+		for index, pattern in ipairs(self.BLACKLIST_STRING_PATTERN) do
+			if IsStringPatternInText(text, pattern) then
+				return true
+			end
+		end
+		return false
+	end
 end
 
 -- Get the ability's buffType (food or drink)
@@ -198,13 +202,13 @@ function lib:GetBuffTypeInfos(abilityId)
 -- Returns 2: number buffTypeFoodDrink, bool isDrink
 	local drinkBuffType = self.DRINK_BUFF_ABILITIES[abilityId]
 	if drinkBuffType then
-		return drinkBuffType, true
+		return drinkBuffType, IS_DRINK
 	end
 	local foodBuffType = self.FOOD_BUFF_ABILITIES[abilityId]
 	if foodBuffType then
-		return foodBuffType, false
+		return foodBuffType, IS_FOOD
 	end
-	return LFDB_BUFF_TYPE_NONE, nil -- LFDB_BUFF_TYPE_NONE = 0
+	return LFDB_BUFF_TYPE_NONE, nil
 end
 
 
@@ -217,7 +221,6 @@ local function GetIndexOfNamespaceInEventsList(table, addOnEventNamespace)
 			return index
 		end
 	end
-	return nil
 end
 
 -- Filter the event EVENT_EFFECT_CHANGED to the local player and only the abilityIds of the food/drink buffs
@@ -227,10 +230,11 @@ end
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
 function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace, callbackFunc, ...)
 	-- Returns 1: nilable:succesfulRegister
-	if addOnEventNamespace == nil or addOnEventNamespace == "" or callbackFunc == nil then return nil end
-	local typeNamespace = type(addOnEventNamespace) == "string"
-	local typeFunc = type(callbackFunc) == "function"
-	if typeNamespace == true and typeFunc == true then
+	if addOnEventNamespace == nil or addOnEventNamespace == "" or callbackFunc == nil then
+		return
+	end
+
+	if type(addOnEventNamespace) == "string" and type(callbackFunc) == "function" then
 		local index = GetIndexOfNamespaceInEventsList(self.eventList, addOnEventNamespace)
 		if not index then
 			EVENT_MANAGER:RegisterForEvent(addOnEventNamespace, EVENT_EFFECT_CHANGED, function(_, ...)
@@ -263,11 +267,17 @@ end
 -- Unregister the register function above
 function lib:UnRegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace)
 -- Returns 1: nilable:succesfulUnregister
-	local index = GetIndexOfNamespaceInEventsList(self.eventList, addOnEventNamespace)
-	if index then
-		EVENT_MANAGER:UnregisterForEvent(addOnEventNamespace, EVENT_EFFECT_CHANGED)
-		table.remove(self.eventList, index)
-		return true
+	if addOnEventNamespace == nil or addOnEventNamespace == "" then
+		return
+	end
+
+	if type(addOnEventNamespace) == "string" then
+		local index = GetIndexOfNamespaceInEventsList(self.eventList, addOnEventNamespace)
+		if index then
+			EVENT_MANAGER:UnregisterForEvent(addOnEventNamespace, EVENT_EFFECT_CHANGED)
+			table.remove(self.eventList, index)
+			return true
+		end
 	end
 	return nil
 end
@@ -280,8 +290,6 @@ function lib:Initialize()
 	self.version = self:GetAddonVersionFromManifest(LFDB_LIB_IDENTIFIER)
 	self.eventList = { }
 
-	-- [Libraries] --
-	--LibASync
 	self.async = LibAsync
 	self:InitializeCollector()
 end

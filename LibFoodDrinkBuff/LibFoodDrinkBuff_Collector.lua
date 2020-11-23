@@ -4,7 +4,16 @@ assert(LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRA
 local lib = LIB_FOOD_DRINK_BUFF
 
 function lib:InitializeCollector()
-	--Register new ESO dialog
+
+	-- The collector is only active, if LibAsync is loaded
+	if not self.async then
+		SLASH_COMMANDS["/dumpfdb"] = function()
+			self.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_LIB_ASYNC_NEEDED))
+		end
+		return
+	end
+
+	-- Register new ESO dialog
 	ESO_Dialogs["LIB_FOOD_DRINK_BUFF_FOUND_DATA"] =
 	{
 		title =
@@ -35,17 +44,6 @@ function lib:InitializeCollector()
 	local MAX_ABILITY_ID = 2000000
 	local MAX_ABILITY_DURATION = 2000000
 
-	-- Add a slash command, to start collecting food/drink buffs
-	--The collector is only active, if LibAsync is loaded
-	if not self.async then
-		SLASH_COMMANDS["/dumpfdb"] = function()
-			self.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_LIB_ASYNC_NEEDED))
-		end
-		return
-	end
-
-
---v- --Only working if LibAsync is enabled!                                                                      	 -v-
 	local worldName = GetWorldName()
 	local startScanAbilities = self.async:Create(LFDB_LIB_IDENTIFIER .. "_Collector")
 
@@ -98,9 +96,9 @@ function lib:InitializeCollector()
 		if saveType then
 			self.chat:Print(GetString(SI_LIB_FOOD_DRINK_BUFF_EXPORT_START))
 
-			-- Get and set the SavedVariables. We are not using ZO_SavedVars wrapper here but just the global table of self.svName!
-			_G[self.svName] = _G[self.svName] or { }
-			self.sv = _G[self.svName]
+			-- Get and set the SavedVariables. We are not using ZO_SavedVars wrapper here but just the global table of self.savedVarsName!
+			_G[self.savedVarsName] = _G[self.savedVarsName] or { }
+			self.sv = _G[self.savedVarsName]
 
 			-- Clear old savedVars food and drink buff list of the current server
 			self.sv.foodDrinkBuffList = self.sv.foodDrinkBuffList or { }
@@ -119,7 +117,7 @@ function lib:InitializeCollector()
 				local lastUpdated = self.sv.lastUpdated[worldName]
 				lastUpdated.timestamp = os.date()
 				lastUpdated.saveType = arg
-				notificationAfterCreatingFoodDrinkTable(worldName)
+				notificationAfterCreatingFoodDrinkTable()
 			end)
 		else
 			self.chat:Print(ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ARGUMENT_MISSING, GetString(SI_ERROR_INVALID_COMMAND)))
