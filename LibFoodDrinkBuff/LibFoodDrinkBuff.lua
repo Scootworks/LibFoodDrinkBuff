@@ -230,7 +230,7 @@ end
 --> Performance gain as you check if a food/drink buff got active (gained, refreshed), or was removed (faded, refreshed)
 function lib:RegisterAbilityIdsFilterOnEventEffectChanged(addOnEventNamespace, callbackFunc, ...)
 	-- Returns 1: nilable:succesfulRegister
-	if not addOnEventNamespace or addOnEventNamespace == "" or not callbackFunc then
+	if addOnEventNamespace == nil or addOnEventNamespace == "" or callbackFunc == nil then
 		return
 	end
 
