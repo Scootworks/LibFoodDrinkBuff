@@ -39,8 +39,7 @@ end
 ----------------------------------
 -- BLACKLISTED STRINGS OF BUFFS --
 ----------------------------------
-lib.BLACKLIST_STRING_PATTERN = ZO_ShallowTableCopy(_LIB_FOOD_DRINK_BUFF_BLACKLISTED)
-_LIB_FOOD_DRINK_BUFF_BLACKLISTED = nil -- remove temp data
+lib.BLACKLIST_STRING_PATTERN = { zo_strsplit(GetString(SI_KEYCODE106), GetString(SI_LIB_FOOD_DRINK_BUFF_BLACKLIST)) }
 
 ----------------------------------------------------
 -- BUFF TYPES - LibFoodDrinkBuff_buffTypeConstant --

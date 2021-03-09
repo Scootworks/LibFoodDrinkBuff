@@ -3,6 +3,10 @@ assert(LIB_FOOD_DRINK_BUFF, string.format(GetString(SI_LIB_FOOD_DRINK_BUFF_LIBRA
 
 local lib = LIB_FOOD_DRINK_BUFF
 
+local select, ipairs, type = select, ipairs, type
+local GetGameTimeMilliseconds, GetUnitBuffInfo, GetItemName = GetGameTimeMilliseconds, GetUnitBuffInfo, GetItemName
+local ZO_CachedStrFormat, zo_max, zo_strfind, zo_roundToNearest = ZO_CachedStrFormat, zo_max, zo_strfind, zo_roundToNearest
+
 local IS_DRINK = true
 local IS_FOOD = not IS_DRINK
 
@@ -36,7 +40,7 @@ end
 -- Calculate time left of a food/drink buff
 function lib:GetTimeLeftInSeconds(timeEndingInMilliseconds)
 -- Returns 1: number seconds
-	return math.max(zo_roundToNearest(timeEndingInMilliseconds - GetGameTimeMilliseconds() / 1000, 1), 0)
+	return zo_max(zo_roundToNearest(timeEndingInMilliseconds - GetGameTimeMilliseconds() / 1000, 1), 0)
 end
 
 function lib:GetFoodBuffInfos(unitTag)
@@ -163,7 +167,7 @@ if LibChatMessage then
 end
 if not lib.chat.Print then
 	function lib.chat:Print(message)
-		CHAT_ROUTER:AddDebugMessage(string.format("[%s] %s", LFDB_LIB_IDENTIFIER, message))
+		CHAT_ROUTER:AddDebugMessage(ZO_CachedStrFormat(SI_CONVERSATION_OPTION_SPEECHCRAFT_FORMAT, LFDB_LIB_IDENTIFIER, message))
 	end
 end
 
@@ -184,7 +188,7 @@ end
 -- Check if a string contains a blacklisted pattern
 do
 	local function IsStringPatternInText(text, pattern)
-		return text:lower():find(pattern:lower())
+		return zo_strfind(text:lower(), pattern:lower())
 	end
 
 	function lib:DoesStringContainsBlacklistPattern(text)

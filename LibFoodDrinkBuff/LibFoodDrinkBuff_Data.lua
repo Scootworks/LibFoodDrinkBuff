@@ -47,6 +47,7 @@ lib.DRINK_BUFF_ABILITIES = {
 	[100488] = LFDB_BUFF_TYPE_MAX_ALL, -- Spring-Loaded Infusion
 	[127531] = LFDB_BUFF_TYPE_MAX_HEALTH_MAGICKA, -- Disastrously Bloody Mara
 	[127572] = LFDB_BUFF_TYPE_MAX_HEALTH_STAMINA_WEREWOLF, -- Pack Leader's Bone Broth
+	[148633] = LFDB_BUFF_TYPE_REGEN_STAMINA, -- Sparkling Mudcrab Apple Cider
 }
 
 --The food buff abilityIds and their LibFoodDrinkBuff_buffTypeConstant
