@@ -1,4 +1,4 @@
-local lib = LIB_FOOD_DRINK_BUFF
+local lib = _G[LFDB_LIB_IDENTIFIER]
 
 -- internal strings
 ZO_CreateStringId("SI_LIB_FOOD_DRINK_BUFF_LIB_ASYNC_NEEDED", "Error: Library \'LibAsync\' missing!")

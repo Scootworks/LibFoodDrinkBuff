@@ -4,8 +4,12 @@ local select, ipairs, type = select, ipairs, type
 local GetGameTimeMilliseconds, GetUnitBuffInfo, GetItemName = GetGameTimeMilliseconds, GetUnitBuffInfo, GetItemName
 local ZO_CachedStrFormat, zo_max, zo_strfind, zo_roundToNearest = ZO_CachedStrFormat, zo_max, zo_strfind, zo_roundToNearest
 
-local IS_DRINK = true
-local IS_FOOD = not IS_DRINK
+--Constants for is a drink or is a food
+local IS_DRINK 	= true
+local IS_FOOD 	= false
+
+--Buff type constants
+local noBuffType = LFDB_BUFF_TYPE_NONE
 
 --------------------
 -- MAIN FUNCTIONS --
@@ -25,12 +29,12 @@ function lib:GetFoodBuffInfos(unitTag)
 			-- Returns 13: string buffName, number timeStarted, number timeEnding, number buffSlot, number stackCount, string iconFilename, string buffType, number effectType, number abilityType, number statusEffectType, number abilityId, bool canClickOff, bool castByPlayer
 			buffName, timeStarted, timeEnding, _, _, iconTexture, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, i)
 			buffTypeFoodDrink, isDrink = self:GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
+			if buffTypeFoodDrink ~= noBuffType then
 				return buffTypeFoodDrink, isDrink, abilityId, ZO_CachedStrFormat(SI_LIB_FOOD_DRINK_BUFF_ABILITY_NAME, buffName), timeStarted, timeEnding, iconTexture, self:GetTimeLeftInSeconds(timeEnding)
 			end
 		end
 	end
-	return LFDB_BUFF_TYPE_NONE, nil, nil, nil, nil, nil, nil, 0
+	return noBuffType, nil, nil, nil, nil, nil, nil, 0
 end
 
 function lib:GetFoodBuffAbilityData()
@@ -51,7 +55,7 @@ function lib:IsFoodBuffActive(unitTag)
 		for i = 1, numBuffs do
 			abilityId = select(11, GetUnitBuffInfo(unitTag, i))
 			buffTypeFoodDrink = self:GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
+			if buffTypeFoodDrink ~= noBuffType then
 				return true
 			end
 		end
@@ -67,7 +71,7 @@ function lib:IsFoodBuffActiveAndGetTimeLeft(unitTag)
 		for i = 1, numBuffs do
 			timeEnding, _, _, _, _, _, _, _, abilityId = select(3, GetUnitBuffInfo(unitTag, i))
 			buffTypeFoodDrink = self:GetBuffTypeInfos(abilityId)
-			if buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE then
+			if buffTypeFoodDrink ~= noBuffType then
 				return true, self:GetTimeLeftInSeconds(timeEnding), abilityId
 			end
 		end
@@ -100,7 +104,7 @@ end
 function lib:IsAbilityAFoodOrDrinkBuff(abilityId)
 -- Returns 1: bool isAbilityAFoodOrDrinkBuff
 	local buffTypeFoodDrink = self:GetBuffTypeInfos(abilityId)
-	return buffTypeFoodDrink ~= LFDB_BUFF_TYPE_NONE
+	return buffTypeFoodDrink ~= noBuffType
 end
 
 
@@ -190,7 +194,7 @@ function lib:GetBuffTypeInfos(abilityId)
 	if foodBuffType then
 		return foodBuffType, IS_FOOD
 	end
-	return LFDB_BUFF_TYPE_NONE, nil
+	return noBuffType, nil
 end
 
 

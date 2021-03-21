@@ -9,13 +9,16 @@ local lib =
 	async = LibAsync, -- can be nil
 }
 
+local libIdentifier 		= LFDB_LIB_IDENTIFIER
+local libIdentifierShort 	= LFDB_LIB_IDENTIFIER_SHORT
+
 -- Chat
-if LibChatMessage then
-	lib.chat = LibChatMessage(LFDB_LIB_IDENTIFIER, LFDB_LIB_IDENTIFIER_SHORT)
+if LibChatMessage ~= nil then
+	lib.chat = LibChatMessage(libIdentifier, libIdentifierShort)
 end
 if not lib.chat.Print then
 	function lib.chat:Print(message)
-		CHAT_ROUTER:AddDebugMessage(ZO_CachedStrFormat(SI_CONVERSATION_OPTION_SPEECHCRAFT_FORMAT, LFDB_LIB_IDENTIFIER, message))
+		CHAT_ROUTER:AddDebugMessage(ZO_CachedStrFormat(SI_CONVERSATION_OPTION_SPEECHCRAFT_FORMAT, libIdentifier, message))
 	end
 end
 
@@ -25,7 +28,7 @@ local function GetAddonVersion()
 	local AddOnManager = GetAddOnManager()
 	local numAddOns = AddOnManager:GetNumAddOns()
 	for i = 1, numAddOns do
-		if AddOnManager:GetAddOnInfo(i) == LFDB_LIB_IDENTIFIER then
+		if AddOnManager:GetAddOnInfo(i) == libIdentifier then
 			return AddOnManager:GetAddOnVersion(i)
 		end
 	end
@@ -35,13 +38,13 @@ lib.version = GetAddonVersion()
 -- Supported Languages
 lib.LANGUAGES_SUPPORTED =
 {
-	[LFDB_LANGUAGE_ENGLISH] = true,
-	[LFDB_LANGUAGE_GERMAN] = true,
-	[LFDB_LANGUAGE_FRENCH] = true,
+	[LFDB_LANGUAGE_ENGLISH]	= true,
+	[LFDB_LANGUAGE_GERMAN] 	= true,
+	[LFDB_LANGUAGE_FRENCH] 	= true,
 }
 local language = GetCVar("language.2")
 lib.clientLanguage = lib.LANGUAGES_SUPPORTED[language] and language or LFDB_LANGUAGE_ENGLISH
 
 -- Global pointers
 LIB_FOOD_DRINK_BUFF = lib
-LibFoodDrinkBuff = lib
+LibFoodDrinkBuff 	= lib

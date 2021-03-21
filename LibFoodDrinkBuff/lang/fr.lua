@@ -1,4 +1,4 @@
-local lib = LIB_FOOD_DRINK_BUFF
+local lib = _G[LFDB_LIB_IDENTIFIER]
 
 -- internal strings
 SafeAddString(SI_LIB_FOOD_DRINK_BUFF_LIB_ASYNC_NEEDED, "Erreur: La bibliothèque \'LibAsync\' ne pas été chargée!", 0)
