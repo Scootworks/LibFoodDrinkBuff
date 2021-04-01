@@ -36,12 +36,8 @@ end
 lib.version = GetAddonVersion()
 
 -- Supported Languages
-lib.LANGUAGES_SUPPORTED =
-{
-	[LFDB_LANGUAGE_ENGLISH]	= true,
-	[LFDB_LANGUAGE_GERMAN] 	= true,
-	[LFDB_LANGUAGE_FRENCH] 	= true,
-}
+lib.LANGUAGES_SUPPORTED = ZO_CreateSetFromArguments(LFDB_LANGUAGE_ENGLISH, LFDB_LANGUAGE_GERMAN, LFDB_LANGUAGE_FRENCH)
+
 local language = GetCVar("language.2")
 lib.clientLanguage = lib.LANGUAGES_SUPPORTED[language] and language or LFDB_LANGUAGE_ENGLISH
 
