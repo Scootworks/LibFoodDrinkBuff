@@ -168,19 +168,14 @@ function lib:GetConsumablesItemListFromInventory()
 end
 
 -- Check if a string contains a blacklisted pattern
-do
-	local function IsStringPatternInText(text, pattern)
-		return zo_strfind(text:lower(), pattern:lower())
-	end
-
-	function lib:DoesStringContainsBlacklistPattern(text)
-		for index, pattern in ipairs(self.BLACKLIST_STRING_PATTERN) do
-			if IsStringPatternInText(text, pattern) then
-				return true
-			end
+function lib:DoesStringContainsBlacklistPattern(text)
+	local lowerText = text:lower()
+	for index, pattern in ipairs(self.BLACKLIST_STRING_PATTERN) do
+		if zo_plainstrfind(lowerText, pattern:lower()) then
+			return true
 		end
-		return false
 	end
+	return false
 end
 
 -- Get the ability's buffType (food or drink)
