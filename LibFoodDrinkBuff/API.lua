@@ -149,12 +149,14 @@ function lib:IsConsumableItem(bagId, slotIndex, ignoreBlacklistItems)
 end
 
 function lib:ConsumeItemFromInventory(slotIndex)
--- Returns 1: bool successfulConsummation
+-- Returns 1: bool success
 	local usable, usableOnlyFromActionSlot = IsItemUsable(BAG_BACKPACK, slotIndex)
 	local canInteract = CanInteractWithItem(BAG_BACKPACK, slotIndex)
 	if usable and canInteract and not usableOnlyFromActionSlot then
 		if self:IsConsumableItem(BAG_BACKPACK, slotIndex) then
-			CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
+			return CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
+			-- You will always have a 'true' return value, even if you actually didn't consume the item.
+			-- The return value is 'true' because of the function success and not the actual consumption of an item.
 		end
 	end
 	return false
